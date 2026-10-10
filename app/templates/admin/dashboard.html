@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Панель администратора{% endblock %}
+{% block content %}
+<h1>Панель администратора</h1>
+<p>Вы вошли как <strong>{{ admin.username }}</strong>.</p>
+<p><a href="/admin/invites">Коды приглашений</a></p>
+<form method="post" action="/admin/logout">
+    <button type="submit">Выйти</button>
+</form>
+{% endblock %}

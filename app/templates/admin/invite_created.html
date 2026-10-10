@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Код создан{% endblock %}
+{% block content %}
+<h1>Код приглашения создан</h1>
+<p class="warning" role="alert">
+    Скопируйте код сейчас. Он показывается только один раз: в базе хранится
+    лишь его хэш, поэтому повторно увидеть код будет невозможно.
+</p>
+<p class="invite-code">{{ raw_code }}</p>
+<p>Срок действия: {{ ttl_days }} дн.</p>
+<p><a href="/admin/invites">К списку кодов</a></p>
+{% endblock %}

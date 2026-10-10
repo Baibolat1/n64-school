@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Доступ закрыт{% endblock %}
+{% block content %}
+<h1>Доступ закрыт</h1>
+<p>Ваш доступ к сайту заблокирован администратором.</p>
+<form method="post" action="/logout">
+    <button type="submit">Выйти</button>
+</form>
+{% endblock %}

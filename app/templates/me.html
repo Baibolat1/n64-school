@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Мой псевдоним{% endblock %}
+{% block content %}
+<h1>Моя страница</h1>
+<p>Ваш псевдоним: <strong>{{ student.alias }}</strong></p>
+
+<h2>Сменить псевдоним</h2>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if can_change %}
+<form method="post" action="/me/alias" class="stacked-form">
+    <label for="new_alias">Новый псевдоним</label>
+    <input id="new_alias" name="new_alias" type="text" maxlength="24"
+           autocomplete="off" value="{{ alias_value }}" required>
+
+    <button type="submit">Сохранить</button>
+</form>
+{% else %}
+<p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
+    Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
+{% endif %}
+
+<form method="post" action="/logout">
+    <button type="submit">Выйти</button>
+</form>
+{% endblock %}

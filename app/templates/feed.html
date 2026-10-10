@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Лента{% endblock %}
+{% block content %}
+<h1>Лента</h1>
+
+<section>
+    <h2>Новый пост</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="/feed/posts" class="stacked-form">
+        <label for="body">Текст</label>
+        <textarea id="body" name="body" rows="4" maxlength="5000"
+                  required>{{ body or '' }}</textarea>
+
+        <label class="checkbox">
+            <input type="checkbox" name="is_anonymous" value="true"
+                   {% if is_anonymous %}checked{% endif %}>
+            Опубликовать анонимно
+        </label>
+        <p class="hint">При анонимной публикации вместо псевдонима будет показано
+            «Аноним».</p>
+
+        <button type="submit">Опубликовать</button>
+    </form>
+</section>
+
+<section class="posts">
+    {% if posts %}
+        {% for post, comment_count in posts %}
+            {% include "_post_card.html" %}
+        {% endfor %}
+    {% else %}
+        <p class="muted">Пока нет постов. Будьте первым!</p>
+    {% endif %}
+</section>
+
+<nav class="pagination" aria-label="Постраничная навигация">
+    {% if page > 1 %}
+        <a href="/feed?page={{ page - 1 }}">Позже</a>
+    {% else %}
+        <span></span>
+    {% endif %}
+    <span class="muted">Страница {{ page }} из {{ total_pages }}</span>
+    {% if page < total_pages %}
+        <a href="/feed?page={{ page + 1 }}">Раньше</a>
+    {% else %}
+        <span></span>
+    {% endif %}
+</nav>
+{% endblock %}

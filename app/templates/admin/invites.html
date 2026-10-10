@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Коды приглашений{% endblock %}
+{% block content %}
+<h1>Коды приглашений</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+
+<form method="post" action="/admin/invites" class="stacked-form">
+    <label for="ttl_days">Срок действия, дней</label>
+    <input id="ttl_days" name="ttl_days" type="number" min="1"
+           value="{{ default_ttl_days }}" required>
+    <button type="submit">Создать код</button>
+</form>
+
+<h2>Выданные коды</h2>
+{% if invites %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Создан</th>
+            <th>Кем</th>
+            <th>Действует до</th>
+            <th>Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for invite, admin_username in invites %}
+        <tr>
+            <td>{{ invite.created_at }}</td>
+            <td>{{ admin_username }}</td>
+            <td>{{ invite.expires_at }}</td>
+            <td>
+                {% if invite.used_at %}
+                Использован ({{ invite.used_at }})
+                {% else %}
+                Свободен ({{ invite.used_count }}/{{ invite.max_uses }})
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Коды ещё не выдавались.</p>
+{% endif %}
+{% endblock %}

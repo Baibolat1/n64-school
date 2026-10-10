@@ -1,0 +1,13 @@
+{% set comment_count = comment_count|default(0) %}
+<article class="post-card">
+    <div class="post-meta">
+        <span class="post-author">{{ post.display_alias }}</span>
+        <time datetime="{{ post.created_at.isoformat() }}">
+            {{ post.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
+        </time>
+    </div>
+    <p class="post-body">{{ post.body }}</p>
+    <p class="post-footer">
+        <a href="/feed/posts/{{ post.id }}">Комментарии ({{ comment_count }})</a>
+    </p>
+</article>

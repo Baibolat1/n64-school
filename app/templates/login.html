@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Вход по коду приглашения{% endblock %}
+{% block content %}
+<h1>Вход</h1>
+<p>Введите код приглашения, который выдал администратор.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/login" class="stacked-form">
+    <label for="code">Код приглашения</label>
+    <input id="code" name="code" type="text" placeholder="XXXX-XXXX-XXXX"
+           autocomplete="off" autocapitalize="characters" spellcheck="false"
+           value="{{ code or '' }}" required autofocus>
+
+    <button type="submit">Войти</button>
+</form>
+{% endblock %}

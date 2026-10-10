@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Школа{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {% if student %}
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <span class="topnav-alias">{{ student.alias }}</span>
+            <span class="topnav-links">
+                <a href="/feed">Лента</a>
+                <a href="/me">Профиль</a>
+                <form method="post" action="/logout" class="inline-form">
+                    <button type="submit" class="link-button">Выйти</button>
+                </form>
+            </span>
+        </div>
+    </nav>
+    {% endif %}
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
