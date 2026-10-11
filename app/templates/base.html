@@ -15,6 +15,7 @@
                 <a href="/feed">Лента</a>
                 <a href="/me">Профиль</a>
                 <form method="post" action="/logout" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="link-button">Выйти</button>
                 </form>
             </span>

@@ -5,6 +5,7 @@
 <p>Введите код приглашения, который выдал администратор.</p>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="/login" class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="code">Код приглашения</label>
     <input id="code" name="code" type="text" placeholder="XXXX-XXXX-XXXX"
            autocomplete="off" autocapitalize="characters" spellcheck="false"

@@ -5,6 +5,7 @@
 <p><a href="/admin">&larr; В панель администратора</a></p>
 
 <form method="post" action="/admin/invites" class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="ttl_days">Срок действия, дней</label>
     <input id="ttl_days" name="ttl_days" type="number" min="1"
            value="{{ default_ttl_days }}" required>

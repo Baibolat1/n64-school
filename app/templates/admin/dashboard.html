@@ -5,6 +5,7 @@
 <p>Вы вошли как <strong>{{ admin.username }}</strong>.</p>
 <p><a href="/admin/invites">Коды приглашений</a></p>
 <form method="post" action="/admin/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Выйти</button>
 </form>
 {% endblock %}

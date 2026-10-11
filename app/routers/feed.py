@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, 
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.core.deps import require_not_banned
+from app.core.deps import require_csrf, require_not_banned
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.content import CONTENT_STATUS_VISIBLE, Post
@@ -22,7 +22,9 @@ from app.repositories import posts as posts_repo
 from app.schemas.feed import CommentCreate, PostCreate
 from app.services import feed as feed_service
 
-router = APIRouter(tags=["feed"])
+# ``require_csrf`` is attached to the whole router: it is a no-op for safe
+# methods, and every state-changing route here is a form POST.
+router = APIRouter(tags=["feed"], dependencies=[Depends(require_csrf)])
 
 # Posts per page; a fixed size keeps the pagination links simple.
 PAGE_SIZE = 20
@@ -41,13 +43,36 @@ def _parse_page(raw: str | None) -> int:
     return value if value >= 1 else 1
 
 
-def _body_error_message(reason: feed_service.FeedError | None, max_length: int) -> str:
+def _body_error_message(
+    reason: feed_service.FeedError | None, max_length: int, retry_after: int = 0
+) -> str:
     """Human-readable refusal message for a failed create attempt."""
     if reason is feed_service.FeedError.EMPTY:
         return "Текст не может быть пустым"
     if reason is feed_service.FeedError.TOO_LONG:
         return f"Слишком длинно: максимум {max_length} символов"
+    if reason is feed_service.FeedError.RATE_LIMITED:
+        return f"Слишком часто. Попробуйте снова через {retry_after} с."
+    if reason is feed_service.FeedError.PII_BLOCKED:
+        return (
+            "В тексте есть данные, которые нельзя публиковать: телефоны, "
+            "адреса почты, ссылки и мессенджеры. Уберите их и отправьте снова."
+        )
     return "Не удалось сохранить"
+
+
+def _refusal_status(
+    result: feed_service.PostCreateResult | feed_service.CommentCreateResult,
+) -> int:
+    """HTTP status for a refused create attempt.
+
+    Rate limiting is the one refusal a client should be able to act on
+    programmatically, so it gets its own status (and a ``Retry-After`` header);
+    a content refusal stays a 200 with the form re-rendered.
+    """
+    if result.reason is feed_service.FeedError.RATE_LIMITED:
+        return status.HTTP_429_TOO_MANY_REQUESTS
+    return status.HTTP_200_OK
 
 
 def _get_visible_post(db: Session, post_id: int) -> Post:
@@ -72,6 +97,7 @@ def _render_feed(
     error: str | None = None,
     body: str = "",
     is_anonymous: bool = False,
+    status_code: int = status.HTTP_200_OK,
 ) -> Response:
     total = posts_repo.count_visible_posts(db)
     total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
@@ -93,6 +119,7 @@ def _render_feed(
             "body": body,
             "is_anonymous": is_anonymous,
         },
+        status_code=status_code,
     )
 
 
@@ -105,6 +132,7 @@ def _render_post(
     error: str | None = None,
     comment_body: str = "",
     comment_is_anonymous: bool = False,
+    status_code: int = status.HTTP_200_OK,
 ) -> Response:
     comments = comments_repo.list_visible_comments(db, post.id)
     return templates.TemplateResponse(
@@ -118,6 +146,7 @@ def _render_post(
             "comment_body": comment_body,
             "comment_is_anonymous": comment_is_anonymous,
         },
+        status_code=status_code,
     )
 
 
@@ -142,15 +171,21 @@ def create_post(
     if result.ok:
         # Post/Redirect/Get: a reload will not resubmit the form.
         return RedirectResponse(url="/feed", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_feed(
+    response = _render_feed(
         request,
         db,
         student,
         page=1,
-        error=_body_error_message(result.reason, feed_service.MAX_POST_LENGTH),
+        error=_body_error_message(
+            result.reason, feed_service.MAX_POST_LENGTH, result.retry_after
+        ),
         body=result.body,
         is_anonymous=form.is_anonymous,
+        status_code=_refusal_status(result),
     )
+    if result.retry_after:
+        response.headers["Retry-After"] = str(result.retry_after)
+    return response
 
 
 @router.get("/feed/posts/{post_id}", response_class=HTMLResponse)
@@ -180,12 +215,18 @@ def create_comment(
         return RedirectResponse(
             url=f"/feed/posts/{post.id}", status_code=status.HTTP_303_SEE_OTHER
         )
-    return _render_post(
+    response = _render_post(
         request,
         db,
         student,
         post,
-        error=_body_error_message(result.reason, feed_service.MAX_COMMENT_LENGTH),
+        error=_body_error_message(
+            result.reason, feed_service.MAX_COMMENT_LENGTH, result.retry_after
+        ),
         comment_body=result.body,
         comment_is_anonymous=form.is_anonymous,
+        status_code=_refusal_status(result),
     )
+    if result.retry_after:
+        response.headers["Retry-After"] = str(result.retry_after)
+    return response

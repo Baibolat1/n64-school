@@ -7,19 +7,28 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.deps import current_student, require_not_banned
+from app.core.deps import (
+    client_ip,
+    current_student,
+    require_csrf,
+    require_not_banned,
+)
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.student import Student
 from app.services import aliases as aliases_service
 from app.services import invites as invites_service
+from app.services import login_throttle
 from app.services import student_auth
 
-router = APIRouter(tags=["auth"])
+# ``require_csrf`` covers the login form too, so a third-party page cannot sign
+# a visitor in with a code of its choosing (or trigger a logout).
+router = APIRouter(tags=["auth"], dependencies=[Depends(require_csrf)])
 
 # One message for every failure cause (unknown, expired, used) so the form
 # cannot be used to enumerate valid codes.
 LOGIN_ERROR = "Код приглашения недействителен"
+THROTTLE_ERROR = "Слишком много попыток входа. Попробуйте позже."
 
 
 def _set_session_cookie(response: Response, raw_token: str) -> None:
@@ -54,6 +63,17 @@ def login_submit(
     code: Annotated[str, Form()] = "",
     db: Session = Depends(get_db),
 ) -> Response:
+    ip = client_ip(request)
+    retry_after = login_throttle.check_student(ip)
+    if retry_after is not None:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": THROTTLE_ERROR, "code": ""},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+        )
+
     student = invites_service.redeem_invite(db, code)
     if student is None:
         # Identical status and message for every failure reason.
@@ -64,6 +84,7 @@ def login_submit(
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
+    login_throttle.clear_student(ip)
     response = RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
     _set_session_cookie(response, student_auth.issue_student_session(student))
     return response
@@ -89,10 +110,7 @@ def _alias_error_message(result: aliases_service.AliasChangeResult) -> str:
         return "Псевдоним не может начинаться с цифры"
     if reason is aliases_service.AliasError.INVALID_CHARS:
         return "Недопустимые символы: буквы, цифры, пробел, дефис и подчёркивание"
-    if reason in (
-        aliases_service.AliasError.RESERVED,
-        aliases_service.AliasError.FORBIDDEN,
-    ):
+    if reason is aliases_service.AliasError.RESERVED:
         return "Такое имя использовать нельзя"
     if reason is aliases_service.AliasError.COOLDOWN:
         days = settings.ALIAS_CHANGE_COOLDOWN_DAYS

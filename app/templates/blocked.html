@@ -4,6 +4,7 @@
 <h1>Доступ закрыт</h1>
 <p>Ваш доступ к сайту заблокирован администратором.</p>
 <form method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Выйти</button>
 </form>
 {% endblock %}

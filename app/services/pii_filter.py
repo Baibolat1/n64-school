@@ -34,6 +34,7 @@ __all__ = [
     "RULES",
     "normalize_text",
     "check_text",
+    "blocking_codes",
 ]
 
 # Text substituted for a redacted fragment in ``FilterResult.clean_text``. One
@@ -96,9 +97,10 @@ class FilterResult:
 
     ``codes`` is the set of every rule that fired (hard and soft alike), so a
     caller can always see *why* -- e.g. a blocking verdict still lists the soft
-    full-name hit alongside the phone hit. ``clean_text`` is the normalized text
-    with every matched region replaced by :data:`PLACEHOLDER`; ``matches`` holds
-    the truncated snippets.
+    full-name hit alongside the phone hit. ``clean_text`` is the original input
+    with every matched region replaced by :data:`PLACEHOLDER` (and nothing else
+    touched, so its line breaks survive); ``matches`` holds the truncated
+    snippets, taken from the normalized text the rules saw.
     """
 
     verdict: Verdict
@@ -151,20 +153,67 @@ _TRANSLATION = str.maketrans(
     }
 )
 
-_WHITESPACE_RE = re.compile(r"\s+")
+
+def _normalize_with_map(raw: str) -> tuple[str, list[tuple[int, int]]]:
+    """Normalize ``raw`` and record where each result character came from.
+
+    Returns the normalized text and, for every character in it, the half-open
+    range of ``raw`` that character was built from. NFKC is applied one
+    character at a time rather than to the whole string: a whole-string pass can
+    compose a base letter with the combining mark that follows it, and the pair
+    would then have no single raw range. Per-character folding loses only that
+    composition -- no rule in :data:`RULES` depends on it -- and in exchange
+    every normalized character can be traced back exactly.
+
+    One character can still fold into several ("㎞" becomes "km"); each of them
+    repeats the same raw range, so the map stays index-for-index with the text.
+    The whitespace branch is the mirror image: a whole run becomes one space
+    whose range covers the run, so redacting it removes the run entirely.
+    """
+    text_parts: list[str] = []
+    spans: list[tuple[int, int]] = []
+
+    index = 0
+    length = len(raw)
+    while index < length:
+        char = raw[index]
+        if _INVISIBLE_RE.match(char):
+            index += 1
+            continue
+
+        folded = char.translate(_TRANSLATION)
+        if folded.isspace():
+            # Swallow the whole run, invisibles included, as a single space.
+            run_end = index
+            while run_end < length:
+                next_char = raw[run_end].translate(_TRANSLATION)
+                if not _INVISIBLE_RE.match(raw[run_end]) and not next_char.isspace():
+                    break
+                run_end += 1
+            text_parts.append(" ")
+            spans.append((index, run_end))
+            index = run_end
+            continue
+
+        expanded = unicodedata.normalize("NFKC", folded)
+        text_parts.append(expanded)
+        spans.extend([(index, index + 1)] * len(expanded))
+        index += 1
+
+    return "".join(text_parts), spans
 
 
 def normalize_text(raw: str) -> str:
-    """Canonicalize ``raw`` before analysis and for ``clean_text``.
+    """Canonicalize ``raw`` for analysis.
 
     Applies NFKC (composes, folds full-width forms and non-breaking spaces),
     removes invisible/formatting characters, unifies quotes and dashes, and
     collapses every run of whitespace (including newlines) to a single space.
+
+    This is the text the rules run against, not the text that is stored: see
+    :func:`check_text` for how a match is carried back to the original.
     """
-    text = unicodedata.normalize("NFKC", raw)
-    text = _INVISIBLE_RE.sub("", text)
-    text = text.translate(_TRANSLATION)
-    return _WHITESPACE_RE.sub(" ", text)
+    return _normalize_with_map(raw)[0]
 
 
 # --- Rule patterns ------------------------------------------------------------
@@ -321,8 +370,23 @@ RULES = (
     ),
 )
 
+# Codes of the rules whose hit refuses a message outright. Derived from RULES so
+# the two can never drift.
+_HARD_CODES = frozenset(rule.code for rule in RULES if rule.severity is Severity.HARD)
+
 
 # --- Matching -----------------------------------------------------------------
+
+
+def blocking_codes(result: FilterResult) -> tuple[str, ...]:
+    """Sorted codes of the HARD rules that fired -- the reason for a BLOCK.
+
+    A blocking verdict also lists any soft hit that happened to overlap, so a
+    caller that needs to record *why* the message was refused asks here rather
+    than reading :attr:`FilterResult.codes` wholesale. Empty for a non-BLOCK
+    verdict.
+    """
+    return tuple(sorted(code for code in result.codes if code in _HARD_CODES))
 
 
 def _cluster(found):
@@ -360,11 +424,18 @@ def _fragment(text: str) -> str:
 def check_text(raw: str) -> FilterResult:
     """Classify ``raw`` and return its :class:`FilterResult`.
 
-    The text is normalized first. Every rule runs over it; overlapping hits are
-    merged, then any HARD hit makes the verdict BLOCK, otherwise any hit at all
-    makes it FLAG, otherwise PASS.
+    Rules run against the normalized text (see :func:`normalize_text`), so
+    obfuscation cannot hide a hit; ``matches`` snippets come from that same
+    normalized text. ``clean_text``, though, is built from the *original*
+    ``raw``: each flagged normalized range is mapped back to the raw characters
+    behind it and only those are replaced by :data:`PLACEHOLDER`. The author's
+    line breaks and spacing therefore survive into what is stored, while what
+    was analysed is still exactly what can never slip past the rules.
+
+    Overlapping hits are merged; any HARD hit makes the verdict BLOCK, else any
+    hit at all makes it FLAG, else PASS.
     """
-    text = normalize_text(raw)
+    text, spans = _normalize_with_map(raw)
 
     found = []
     for rule in RULES:
@@ -405,10 +476,13 @@ def check_text(raw: str) -> FilterResult:
         for code in sorted({rule.code for rule in rules}):
             matches.append(Match(code=code, fragment=_fragment(text[start:end])))
 
-        parts.append(text[cursor:start])
+        # Map the normalized range back onto the raw text and redact there.
+        raw_start = spans[start][0]
+        raw_end = spans[end - 1][1]
+        parts.append(raw[cursor:raw_start])
         parts.append(PLACEHOLDER)
-        cursor = end
-    parts.append(text[cursor:])
+        cursor = raw_end
+    parts.append(raw[cursor:])
 
     return FilterResult(
         verdict=verdict,

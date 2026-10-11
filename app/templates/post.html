@@ -37,6 +37,7 @@
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="/feed/posts/{{ post.id }}/comments"
           class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <label for="comment-body">Текст</label>
         <textarea id="comment-body" name="body" rows="3" maxlength="2000"
                   required>{{ comment_body or '' }}</textarea>

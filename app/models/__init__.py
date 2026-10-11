@@ -1,5 +1,5 @@
 from app.models.admin import Admin, AdminSession
-from app.models.audit import ModerationAction, PiiFlag
+from app.models.audit import ModerationAction, PiiBlockedAttempt, PiiFlag
 from app.models.content import Comment, Post
 from app.models.invite import Invite
 from app.models.report import Report
@@ -14,6 +14,7 @@ __all__ = [
     "Criterion",
     "Invite",
     "ModerationAction",
+    "PiiBlockedAttempt",
     "PiiFlag",
     "Post",
     "Report",

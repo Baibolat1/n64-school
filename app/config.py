@@ -44,5 +44,33 @@ class Settings(BaseSettings):
     # alias_changed_at is still NULL) is always allowed.
     ALIAS_CHANGE_COOLDOWN_DAYS: int = 30
 
+    # --- Rate limiting --------------------------------------------------------
+    # Sliding-window budgets per student, counted in this process only (see
+    # app.services.rate_limit and "Rate limit" in docs/PLAN.md). A limit of 0
+    # switches the action off; windows are in seconds.
+    RATE_LIMIT_POSTS: int = 10
+    RATE_LIMIT_POSTS_WINDOW_SECONDS: int = 3600
+    RATE_LIMIT_COMMENTS: int = 60
+    RATE_LIMIT_COMMENTS_WINDOW_SECONDS: int = 3600
+
+    # Login attempts allowed per client IP before further attempts are refused
+    # with 429 (see app.services.login_throttle). The admin form is strict: it
+    # guards the moderation tools. The student form is soft: a mistyped invite
+    # code is harmless, while a guessing loop is not. A successful login clears
+    # the counter. The client IP is used only as an in-memory counter key -- it
+    # is never stored in the database nor written to a log -- and behind a proxy
+    # it is the proxy's address, so the limit is best read as "per connection".
+    ADMIN_LOGIN_MAX_ATTEMPTS: int = 5
+    ADMIN_LOGIN_WINDOW_SECONDS: int = 900
+    STUDENT_LOGIN_MAX_ATTEMPTS: int = 20
+    STUDENT_LOGIN_WINDOW_SECONDS: int = 900
+
+    # --- CSRF -----------------------------------------------------------------
+    # Name of the cookie that carries the signed CSRF token, and of the hidden
+    # form field that must echo it. The cookie is httpOnly: the server renders
+    # the value into the form, so no script needs to read it.
+    CSRF_COOKIE_NAME: str = "csrf_token"
+    CSRF_FORM_FIELD: str = "csrf_token"
+
 
 settings = Settings()

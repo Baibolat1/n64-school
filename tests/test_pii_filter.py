@@ -19,6 +19,7 @@ from app.services.pii_filter import (  # noqa: E402
     MAX_MATCH_FRAGMENT,
     PLACEHOLDER,
     Verdict,
+    blocking_codes,
     check_text,
 )
 
@@ -190,3 +191,48 @@ def test_pass_result_has_no_codes_and_keeps_text():
     assert result.verdict is Verdict.PASS
     assert result.matches == ()
     assert result.clean_text == text
+
+
+def test_clean_text_keeps_the_authors_line_breaks():
+    # Normalization collapses whitespace for the rules only; what comes back is
+    # the original text with just the matched fragment replaced.
+    text = "Первая строка\n\nВторая    строка\nТретья"
+    result = check_text(text)
+    assert result.clean_text == text
+
+
+def test_line_breaks_do_not_split_a_redacted_fragment():
+    # The phone spans three lines in the raw text; the whole run between the
+    # first and last digit is what gets replaced.
+    result = check_text("Телефон:\n+7\n912 345 67 89")
+    assert result.verdict is Verdict.BLOCK
+    assert result.clean_text == f"Телефон:\n{PLACEHOLDER}"
+
+
+def test_a_character_that_expands_stays_aligned():
+    # "㎞" folds to two characters. The redaction map is indexed by normalized
+    # character, so that expansion has to be accounted for or every later
+    # offset would drift and the wrong part of the raw text replaced.
+    result = check_text("Длина 5 ㎞, звони +7 912 345 67 89")
+    assert result.verdict is Verdict.BLOCK
+    assert result.clean_text == "Длина 5 ㎞, звони [скрыто]"
+
+
+def test_profanity_is_neither_flagged_nor_replaced():
+    text = "какой-то блядский бред, честно"
+    result = check_text(text)
+    assert result.verdict is Verdict.PASS
+    assert result.codes == frozenset()
+    assert result.clean_text == text
+
+
+def test_blocking_codes_lists_only_the_hard_rules():
+    # A blocking text that also trips a soft rule reports only the hard code.
+    result = check_text("Мой номер +79123456789, зовут Иван Петров")
+    assert result.verdict is Verdict.BLOCK
+    assert result.codes == frozenset({"phone", "full_name"})
+    assert blocking_codes(result) == ("phone",)
+
+
+def test_blocking_codes_is_empty_without_a_block():
+    assert blocking_codes(check_text("Меня зовут Иван Петров")) == ()

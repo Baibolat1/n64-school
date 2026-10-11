@@ -9,6 +9,7 @@
 
 {% if can_change %}
 <form method="post" action="/me/alias" class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="new_alias">Новый псевдоним</label>
     <input id="new_alias" name="new_alias" type="text" maxlength="24"
            autocomplete="off" value="{{ alias_value }}" required>
@@ -21,6 +22,7 @@
 {% endif %}
 
 <form method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Выйти</button>
 </form>
 {% endblock %}

@@ -3,7 +3,8 @@
 ``generate_alias`` auto-produces a human-readable, unique alias at registration
 time. The rest of this module implements the student-facing "choose my own
 alias" flow: normalization, validation (length, character set, reserved service
-names, a placeholder profanity filter), availability and the change cooldown.
+names), availability and the change cooldown. There is deliberately no word
+list -- profanity is allowed in aliases (see ``docs/PLAN.md``).
 
 Transaction policy (mirrors ``app.services.admin_auth``): this service layer
 owns commits for write operations -- :func:`set_alias` commits.
@@ -118,30 +119,6 @@ _RESERVED_RE = re.compile(
 # is reserved so a student cannot masquerade as a service account.
 _SERVICE_ALIAS_PREFIX = "ученик-"
 
-# TEMPORARY STUB: a short list of profanity/insult roots. A real content filter
-# arrives in a later stage; this placeholder is intentionally small and is no
-# substitute for actual moderation.
-_PROFANITY_ROOTS = (
-    "хуй",
-    "хуе",
-    "пизд",
-    "бляд",
-    "блят",
-    "ебан",
-    "ебал",
-    "ёбан",
-    "ёбал",
-    "мудак",
-    "мудил",
-    "гандон",
-    "залуп",
-    "долбо",
-    "шлюх",
-    "fuck",
-    "shit",
-)
-
-
 class AliasError(str, Enum):
     """Machine-readable reasons a manual alias change can be refused."""
 
@@ -150,7 +127,6 @@ class AliasError(str, Enum):
     INVALID_CHARS = "invalid_chars"
     LEADING_DIGIT = "leading_digit"
     RESERVED = "reserved"
-    FORBIDDEN = "forbidden"
     TAKEN = "taken"
     COOLDOWN = "cooldown"
 
@@ -214,11 +190,9 @@ def validate_alias(alias: str) -> AliasError | None:
     if _RESERVED_RE.match(folded) or folded.startswith(_SERVICE_ALIAS_PREFIX):
         return AliasError.RESERVED
 
-    # Check profanity on a separator-free copy so "х-у-й" cannot slip through.
-    compact = folded.replace(" ", "").replace("-", "").replace("_", "")
-    if any(root in compact for root in _PROFANITY_ROOTS):
-        return AliasError.FORBIDDEN
-
+    # No word list here on purpose: rude words and profanity are allowed in
+    # aliases and in posts; moderation happens only by complaint (see the
+    # decisions table in ``docs/PLAN.md``). Do not add a dictionary back.
     return None
 
 

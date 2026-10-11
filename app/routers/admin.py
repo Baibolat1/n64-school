@@ -7,17 +7,21 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.deps import require_admin
+from app.core.deps import client_ip, require_admin, require_csrf
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.admin import Admin
 from app.schemas.admin import AdminLogin, AdminOut
 from app.services import admin_auth
 from app.services import invites as invites_service
+from app.services import login_throttle
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"], dependencies=[Depends(require_csrf)]
+)
 
 LOGIN_ERROR = "Неверный логин или пароль"
+THROTTLE_ERROR = "Слишком много попыток входа. Попробуйте позже."
 
 
 def _set_session_cookie(response: Response, raw_token: str) -> None:
@@ -45,6 +49,17 @@ def login_submit(
     form: Annotated[AdminLogin, Form()],
     db: Session = Depends(get_db),
 ) -> Response:
+    ip = client_ip(request)
+    retry_after = login_throttle.check_admin(ip)
+    if retry_after is not None:
+        return templates.TemplateResponse(
+            request,
+            "admin/login.html",
+            {"error": THROTTLE_ERROR, "username": form.username},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+        )
+
     raw_token = admin_auth.login(db, form.username, form.password)
     if raw_token is None:
         # Same response for "no such user" and "wrong password".
@@ -55,6 +70,7 @@ def login_submit(
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
+    login_throttle.clear_admin(ip)
     response = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
     _set_session_cookie(response, raw_token)
     return response
