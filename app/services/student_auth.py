@@ -10,9 +10,11 @@ if a stale cookie is still presented.
 """
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.security import verify_password
 from app.models.student import Student
 
 # Distinct salt so student cookies cannot be confused with any other value
@@ -27,6 +29,24 @@ def _serializer() -> URLSafeTimedSerializer:
 def issue_student_session(student: Student) -> str:
     """Return the signed cookie value for ``student`` (includes issue time)."""
     return _serializer().dumps({"student_id": student.id})
+
+
+def login_with_password(db: Session, email: str, password: str) -> Student | None:
+    """Authenticate a self-registered student by email and password.
+
+    Returns the student on success, or ``None`` for every failure cause (no such
+    email, no password set, wrong password) so the form cannot be used to probe
+    which addresses have accounts. A banned student is still returned; the ban
+    is enforced downstream by ``require_not_banned``, as for invite logins.
+    """
+    student = db.execute(
+        select(Student).where(Student.email == email)
+    ).scalar_one_or_none()
+    if student is None or student.password_hash is None:
+        return None
+    if not verify_password(student.password_hash, password):
+        return None
+    return student
 
 
 def resolve_student_session(db: Session, token: str) -> Student | None:

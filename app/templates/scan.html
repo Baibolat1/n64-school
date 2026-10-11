@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Сканер QR{% endblock %}
+{% block content %}
+<h1>Сканер QR</h1>
+<p>Наведите камеру на QR-код новичка, чтобы подтвердить его регистрацию.</p>
+
+<div id="scan-frame">
+    <video id="scan-video" playsinline muted></video>
+</div>
+<canvas id="scan-canvas" hidden></canvas>
+<form hidden><input type="hidden" id="scan-csrf" name="csrf_token" value="{{ csrf_token }}"></form>
+<p id="scan-status" class="hint">Запрашиваем доступ к камере…</p>
+
+<p class="hint">Нет доступа к камере? Попросите новичка показать код и
+    откройте эту страницу на устройстве с камерой.</p>
+
+<script src="/static/vendor/jsqr.min.js"></script>
+<script src="/static/scan.js"></script>
+{% endblock %}

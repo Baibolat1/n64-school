@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение по QR{% endblock %}
+{% block content %}
+<h1>Подтверждение по QR-коду</h1>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if status == "pending" %}
+<p>Покажи этот код <strong>любому ученику сайта</strong>, чтобы он тебя подтвердил.</p>
+<img id="qr-image" class="qr-image" src="/register/qr/image.png"
+     alt="QR-код для подтверждения" width="240" height="240">
+<p class="hint" id="qr-poll-hint">Ожидаем подтверждения…</p>
+<form method="post" action="/register/qr/refresh">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="link-button">Обновить код</button>
+</form>
+
+{% elif status == "expired" %}
+<p class="warning">Срок действия кода истёк (24 часа). Сгенерируйте новый.</p>
+<form method="post" action="/register/qr/refresh">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Обновить код</button>
+</form>
+
+{% elif status == "confirmed" %}
+<p class="success">Готово — вас подтвердил ученик. Осталось задать пароль.</p>
+<form method="post" action="/register/qr/password" class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password"
+           autocomplete="new-password" required autofocus>
+    <button type="submit">Завершить регистрацию</button>
+</form>
+
+{% else %}
+<p class="error">Код недействителен. <a href="/register/qr">Начать заново</a>.</p>
+{% endif %}
+
+{% if status == "pending" %}
+<script>
+    // Poll until an existing student confirms the code, then reload so the
+    // server renders the "set a password" step.
+    setInterval(async function () {
+        try {
+            const response = await fetch("/register/qr/status", {cache: "no-store"});
+            const data = await response.json();
+            if (data.status && data.status !== "pending") {
+                window.location.reload();
+            }
+        } catch (e) { /* transient network error: keep polling */ }
+    }, 4000);
+</script>
+{% endif %}
+{% endblock %}

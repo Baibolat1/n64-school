@@ -19,6 +19,7 @@ from app.models.student import Student
 from app.services import aliases as aliases_service
 from app.services import invites as invites_service
 from app.services import login_throttle
+from app.services import registration
 from app.services import student_auth
 
 # ``require_csrf`` covers the login form too, so a third-party page cannot sign
@@ -53,7 +54,7 @@ def index(student: Student | None = Depends(current_student)) -> RedirectRespons
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request) -> Response:
     return templates.TemplateResponse(
-        request, "login.html", {"error": None, "code": ""}
+        request, "login.html", {"error": None, "code": "", "email": ""}
     )
 
 
@@ -69,7 +70,7 @@ def login_submit(
         return templates.TemplateResponse(
             request,
             "login.html",
-            {"error": THROTTLE_ERROR, "code": ""},
+            {"error": THROTTLE_ERROR, "code": "", "email": ""},
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             headers={"Retry-After": str(retry_after)},
         )
@@ -80,11 +81,54 @@ def login_submit(
         return templates.TemplateResponse(
             request,
             "login.html",
-            {"error": LOGIN_ERROR, "code": ""},
+            {"error": LOGIN_ERROR, "code": "", "email": ""},
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
     login_throttle.clear_student(ip)
+    response = RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
+    _set_session_cookie(response, student_auth.issue_student_session(student))
+    return response
+
+
+@router.post("/login/email", response_class=HTMLResponse)
+def login_email(
+    request: Request,
+    email: Annotated[str, Form()] = "",
+    password: Annotated[str, Form()] = "",
+    db: Session = Depends(get_db),
+) -> Response:
+    """Sign in a self-registered student by email and password.
+
+    Works for every student who has a password -- both the first ones admitted
+    while registration was open and later QR-confirmed ones -- regardless of the
+    registration limit. Invite-code students have no password and keep using the
+    code form above.
+    """
+    ip = client_ip(request)
+    retry_after = login_throttle.check_register(ip)
+    if retry_after is not None:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": THROTTLE_ERROR, "code": "", "email": email},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    student = student_auth.login_with_password(
+        db, registration.normalize_email(email), password
+    )
+    if student is None:
+        # One message for unknown email, no password and wrong password alike.
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Неверный email или пароль", "code": "", "email": email},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    login_throttle.clear_register(ip)
     response = RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
     _set_session_cookie(response, student_auth.issue_student_session(student))
     return response

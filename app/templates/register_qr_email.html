@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Регистрация по QR{% endblock %}
+{% block content %}
+<h1>Регистрация по QR-коду</h1>
+<p>Введите email — мы покажем QR-код. Пусть любой ученик сайта отсканирует его
+    своим телефоном, чтобы подтвердить вас.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/register/qr" class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="email"
+           value="{{ email or '' }}" required autofocus>
+
+    <button type="submit">Показать QR-код</button>
+</form>
+<p class="hint">Уже есть аккаунт? <a href="/login">Войти</a>.</p>
+{% endblock %}

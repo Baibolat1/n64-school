@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # --- Student authentication ----------------------------------------------
     # Name of the signed cookie that carries the student session.
     STUDENT_COOKIE_NAME: str = "student_session"
+    # Name of the signed cookie that, during QR registration, carries the
+    # novice's plaintext QR token so their own browser can re-render, refresh
+    # and poll it. It is not a session and grants no access on its own.
+    QR_COOKIE_NAME: str = "qr_registration"
     # Student session lifetime in days (used as the signed cookie's max_age).
     STUDENT_SESSION_TTL_DAYS: int = 30
     # Default lifetime, in days, of a newly created invite code. The admin may
@@ -43,6 +47,24 @@ class Settings(BaseSettings):
     # from "running away" from their reputation; the very first change (while
     # alias_changed_at is still NULL) is always allowed.
     ALIAS_CHANGE_COOLDOWN_DAYS: int = 30
+
+    # --- Student self-registration -------------------------------------------
+    # How many students (in total, over all time -- invite, QR and
+    # email/password alike) may exist before open email+password registration
+    # closes. While ``COUNT(students) < OPEN_REGISTRATION_LIMIT`` anyone may
+    # register with an email and a password; afterwards the only ways in are a
+    # QR code confirmed by an existing student or an admin invite code.
+    OPEN_REGISTRATION_LIMIT: int = 30
+    # Minimum accepted password length for self-registered students.
+    MIN_PASSWORD_LENGTH: int = 8
+    # Lifetime, in hours, of a student registration QR token. After it expires
+    # the novice must generate a new code ("Обновить код").
+    QR_TOKEN_TTL_HOURS: int = 24
+    # Sign in with email and password (available to every student who has a
+    # password, i.e. the first ``OPEN_REGISTRATION_LIMIT`` and QR-registered
+    # ones) is throttled per client IP like the invite-code form.
+    REGISTER_MAX_ATTEMPTS: int = 20
+    REGISTER_WINDOW_SECONDS: int = 900
 
     # --- Rate limiting --------------------------------------------------------
     # Sliding-window budgets per student, counted in this process only (see

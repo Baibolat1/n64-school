@@ -32,6 +32,16 @@ class Student(Base):
     invite_id: Mapped[int | None] = mapped_column(
         ForeignKey("invites.id"), nullable=True
     )
+    # Credentials for students who registered themselves (first
+    # ``OPEN_REGISTRATION_LIMIT`` by email+password, later by QR confirmation).
+    # Students created from an admin invite code have neither and sign in with
+    # the code alone. ``email`` is stored lower-cased so uniqueness is
+    # case-insensitive; SQLite allows many NULLs in a unique index, so the
+    # invite-only students do not collide.
+    email: Mapped[str | None] = mapped_column(
+        Text, unique=True, index=True, nullable=True
+    )
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

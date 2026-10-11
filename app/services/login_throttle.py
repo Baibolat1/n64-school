@@ -19,6 +19,7 @@ from app.services.rate_limit import limiter
 
 _ADMIN_PREFIX = "login:admin:"
 _STUDENT_PREFIX = "login:student:"
+_REGISTER_PREFIX = "login:register:"
 
 
 def _consume(key: str, limit: int, window_seconds: int) -> int | None:
@@ -45,6 +46,15 @@ def check_student(ip: str) -> int | None:
     )
 
 
+def check_register(ip: str) -> int | None:
+    """Count a register / email-login attempt; wait seconds if over the limit."""
+    return _consume(
+        _REGISTER_PREFIX + ip,
+        settings.REGISTER_MAX_ATTEMPTS,
+        settings.REGISTER_WINDOW_SECONDS,
+    )
+
+
 def clear_admin(ip: str) -> None:
     """Forget the attempts of ``ip`` after a successful admin login."""
     limiter.reset(_ADMIN_PREFIX + ip)
@@ -53,3 +63,8 @@ def clear_admin(ip: str) -> None:
 def clear_student(ip: str) -> None:
     """Forget the attempts of ``ip`` after a successful student login."""
     limiter.reset(_STUDENT_PREFIX + ip)
+
+
+def clear_register(ip: str) -> None:
+    """Forget the attempts of ``ip`` after a successful register email login."""
+    limiter.reset(_REGISTER_PREFIX + ip)
