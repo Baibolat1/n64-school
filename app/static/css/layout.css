@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Layout: page column, top navigation, burger menu and the mobile bottom
+   bar. Loaded after theme.css and before components.css.
+   ========================================================================== */
+
+/* Page column -------------------------------------------------------------- */
+
+.container {
+    width: 100%;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-4) var(--space-8);
+}
+
+/* Top navigation ----------------------------------------------------------- */
+
+.topnav {
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--line);
+}
+
+.topnav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    max-width: 52rem;               /* a little wider than the content column */
+    margin: 0 auto;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--step--1);
+}
+
+.topnav-alias {
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+}
+
+.topnav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+}
+
+.topnav-links a {
+    color: var(--cream);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.topnav-links a:hover {
+    text-decoration: underline;
+}
+
+/* "Учителя" has no page yet (etap 9). The item is rendered in both bars so the
+   section is already visible in the layout, but it is inert and dimmed. */
+.topnav .is-disabled,
+.bottomnav .is-disabled {
+    color: var(--text-dim);
+    pointer-events: none;
+    cursor: default;
+}
+
+/* In the top bar the current section is the only one underlined, so plain
+   hover can keep its underline without the two states blurring together. */
+.topnav .is-active {
+    text-decoration: underline;
+    text-underline-offset: 0.35em;
+    text-decoration-thickness: 1px;
+}
+
+.inline-form {
+    display: inline;
+    margin: 0;
+}
+
+.link-button {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 400;
+    color: var(--cream);
+    background: none;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    background: none;
+    text-decoration: underline;
+}
+
+/* Burger: a native <details> toggle, no JavaScript involved. ---------------- */
+
+.burger {
+    position: relative;
+}
+
+.burger > summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--cream);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    list-style: none;
+    transition: border-color var(--transition-fast);
+}
+
+.burger > summary::-webkit-details-marker {
+    display: none;
+}
+
+.burger > summary::marker {
+    content: "";
+}
+
+.burger[open] > summary,
+.burger > summary:hover {
+    border-color: var(--line-strong);
+}
+
+.burger-panel {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: 20;
+    min-width: 12rem;
+    padding: var(--space-2);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-soft);
+}
+
+.burger-panel a,
+.burger-panel .link-button {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    color: var(--cream);
+    border-radius: var(--radius-s);
+}
+
+.burger-panel a:hover,
+.burger-panel .link-button:hover {
+    background: var(--surface-1);
+    text-decoration: none;
+}
+
+/* Bottom mobile bar -------------------------------------------------------- */
+
+.bottomnav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: var(--space-1);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--bg-deep);
+    border-top: 1px solid var(--line);
+}
+
+.bottomnav > a,
+.bottomnav > span {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-height: var(--nav-h);
+    padding: var(--space-2) var(--space-1);
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: var(--step--1);
+    line-height: 1;
+    transition: color var(--transition-fast);
+}
+
+.bottomnav > a:hover {
+    color: var(--cream);
+    text-decoration: none;
+}
+
+.bottomnav .is-active {
+    color: var(--cream);
+}
+
+/* Responsive switch: top bar on wide screens, bottom bar on phones. --------- */
+
+@media (min-width: 768px) {
+    .topnav {
+        display: block;
+    }
+
+    .bottomnav {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .topnav {
+        display: none;
+    }
+
+    .bottomnav {
+        display: flex;
+    }
+
+    body {
+        /* keep the fixed bar from covering the last post */
+        padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-4));
+    }
+}

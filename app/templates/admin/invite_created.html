@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Код создан{% endblock %}
 {% block content %}
+<section class="card">
 <h1>Код приглашения создан</h1>
 <p class="warning" role="alert">
     Скопируйте код сейчас. Он показывается только один раз: в базе хранится
@@ -8,5 +9,6 @@
 </p>
 <p class="invite-code">{{ raw_code }}</p>
 <p>Срок действия: {{ ttl_days }} дн.</p>
-<p><a href="/admin/invites">К списку кодов</a></p>
+<p class="hint"><a href="/admin/invites">К списку кодов</a></p>
+</section>
 {% endblock %}

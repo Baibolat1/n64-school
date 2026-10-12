@@ -1,0 +1,20 @@
+{# Top navigation: shown on wide screens (tablet/laptop and up), hidden on
+   phones by layout.css. Rendered from base.html only inside `{% if student %}`.
+   There is deliberately no logout here: the exit lives on the profile page
+   only, so a student cannot sign out by mis-tapping a menu item.
+   The items mirror _bottomnav.html one for one -- wider screens get the same
+   set, just laid out in a row. #}
+{% set path = request.url.path %}
+<nav class="topnav">
+    <div class="topnav-inner">
+        <span class="topnav-alias">{{ student.alias }}</span>
+        <span class="topnav-links">
+            <a href="/feed"{% if path == '/feed' or path.startswith('/feed/') %} class="is-active"{% endif %}>Лента</a>
+            {# Teacher reviews are still etap 9: no page to link to yet. The item
+               is shown dimmed so the section is already visible in the layout. #}
+            <span class="is-disabled">Учителя</span>
+            <a href="/me"{% if path == '/me' %} class="is-active"{% endif %}>Профиль</a>
+            <a href="/scan"{% if path == '/scan' %} class="is-active"{% endif %}>QR-сканер</a>
+        </span>
+    </div>
+</nav>

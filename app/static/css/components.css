@@ -1,0 +1,374 @@
+/* ==========================================================================
+   Components: messages, forms, cards, avatars, tables and the QR surface.
+   Loaded last, after theme.css and layout.css.
+   ========================================================================== */
+
+/* Messages ----------------------------------------------------------------- */
+
+.error,
+.warning,
+.success {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-left: 3px solid currentColor;
+    border-radius: var(--radius-s);
+}
+
+.error {
+    color: var(--danger);
+}
+
+.warning {
+    color: var(--warning);
+}
+
+.success {
+    color: var(--success);
+}
+
+.hint,
+.muted {
+    color: var(--text-dim);
+    font-size: var(--step--1);
+}
+
+/* Forms -------------------------------------------------------------------- */
+
+.stacked-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+
+.stacked-form label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea {
+    padding: var(--space-3) var(--space-4);
+    font: inherit;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+    color: var(--text-dim);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+    border-color: var(--line-strong);
+}
+
+textarea {
+    resize: vertical;
+}
+
+button {
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    font: inherit;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--cream);
+    border: 1px solid transparent;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: filter var(--transition-fast);
+}
+
+button:hover {
+    filter: brightness(1.08);
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    font-weight: 400;
+}
+
+.checkbox input {
+    margin: 0;
+    /* Tint the native control instead of rebuilding it with appearance: none. */
+    accent-color: var(--cream);
+}
+
+.invite-code {
+    padding: var(--space-3) var(--space-4);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: var(--step-1);
+    letter-spacing: 0.08em;
+    text-align: center;
+    color: var(--cream);
+    background: var(--surface-2);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-s);
+    user-select: all;
+}
+
+/* OAuth placeholder: present but intentionally not wired up. ---------------- */
+
+.btn-oauth {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+    margin-top: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    font: inherit;
+    font-size: var(--step--1);
+    font-weight: 400;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    cursor: not-allowed;
+}
+
+/* Page header: the avatar and the page's own heading, side by side. -------- */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+
+.page-header h1,
+.page-header h2 {
+    margin: 0;
+}
+
+/* Vertical rhythm ---------------------------------------------------------- */
+
+/* The reset strips every margin, so blocks stacked in the page column would
+   touch. State the gap once here instead of repeating it in each template.
+   Excluded from the login screen: its children are absolutely positioned
+   against the hero and a margin would nudge the logo and the burger. */
+body:not(.login-page) main > * + * {
+    margin-top: var(--space-5);
+}
+
+/* A heading that introduces a block needs a breath before the content. */
+main section > h1,
+main section > h2 {
+    margin-bottom: var(--space-3);
+}
+
+/* Cards -------------------------------------------------------------------- */
+
+.card {
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+}
+
+.post-card {
+    padding: var(--space-4) var(--space-5);
+    margin-top: var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+}
+
+.post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    margin-bottom: var(--space-3);
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}
+
+.post-author {
+    font-weight: 600;
+    color: var(--cream);
+}
+
+/* User text is rendered as plain text; line breaks come from CSS, not <br>. */
+.post-body,
+.comment-body {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.post-footer {
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+}
+
+/* Comments ----------------------------------------------------------------- */
+
+.comment {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+}
+
+.comment:last-child {
+    border-bottom: none;
+}
+
+/* Pagination --------------------------------------------------------------- */
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+    font-size: var(--step--1);
+}
+
+.pagination a {
+    color: var(--cream);
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    text-decoration: underline;
+}
+
+.back-link {
+    margin-top: 0;
+}
+
+.back-link a {
+    color: var(--cream);
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* Data table --------------------------------------------------------------- */
+
+/* The invite log is wider than a phone; let it scroll sideways inside the card
+   instead of pushing a horizontal scrollbar onto the whole page. */
+.table-scroll {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+}
+
+.data-table th,
+.data-table td {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+.data-table th {
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+/* Avatar: initials on one of the six palette tones, picked by data-color. -- */
+
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--cream);
+    background: var(--avatar-0);
+    border-radius: 50%;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.avatar[data-color="0"] { background: var(--avatar-0); }
+.avatar[data-color="1"] { background: var(--avatar-1); }
+.avatar[data-color="2"] { background: var(--avatar-2); }
+.avatar[data-color="3"] { background: var(--avatar-3); }
+.avatar[data-color="4"] { background: var(--avatar-4); }
+.avatar[data-color="5"] { background: var(--avatar-5); }
+
+.avatar--sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: var(--step--1);
+}
+
+.avatar--lg {
+    width: 3rem;
+    height: 3rem;
+    font-size: var(--step-1);
+}
+
+/* Line icon: inline SVG that inherits the text colour and sits on the line. - */
+
+.icon {
+    width: 1.25em;
+    height: 1.25em;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.18em;
+}
+
+/* QR and camera scanner. #scan-frame / #scan-video ids are used by scan.js. - */
+
+.qr-image {
+    display: block;
+    margin: var(--space-4) auto;
+    background: #fff;               /* QR must stay on white to be scannable */
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-s);
+}
+
+#scan-frame {
+    margin-top: var(--space-4);
+    overflow: hidden;
+    background: #000;
+    border-radius: var(--radius-s);
+}
+
+#scan-video {
+    display: block;
+    width: 100%;
+    max-height: 70vh;
+    object-fit: cover;
+}

@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Пост — Лента{% endblock %}
 {% block content %}
 <p class="back-link"><a href="/feed">← Назад в ленту</a></p>
 
 <article class="post-card">
     <div class="post-meta">
+        {{ ui.avatar(post.display_alias, 'sm') }}
         <span class="post-author">{{ post.display_alias }}</span>
         <time datetime="{{ post.created_at.isoformat() }}">
             {{ post.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
@@ -19,6 +21,7 @@
         {% for comment in comments %}
         <article class="comment">
             <div class="post-meta">
+                {{ ui.avatar(comment.display_alias, 'sm') }}
                 <span class="post-author">{{ comment.display_alias }}</span>
                 <time datetime="{{ comment.created_at.isoformat() }}">
                     {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
@@ -32,7 +35,7 @@
     {% endif %}
 </section>
 
-<section>
+<section class="card">
     <h2>Оставить комментарий</h2>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="/feed/posts/{{ post.id }}/comments"

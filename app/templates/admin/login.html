@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Вход для администратора{% endblock %}
 {% block content %}
+<section class="card">
 <h1>Вход для администратора</h1>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="/admin/login" class="stacked-form">
@@ -15,4 +16,5 @@
 
     <button type="submit">Войти</button>
 </form>
+</section>
 {% endblock %}

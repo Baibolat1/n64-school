@@ -67,7 +67,7 @@ def _set_session_cookie(response: Response, raw_token: str) -> None:
         samesite="lax",
         secure=settings.COOKIE_SECURE,
         path="/",
-        max_age=settings.STUDENT_SESSION_TTL_DAYS * 86400,
+        max_age=settings.STUDENT_SESSION_COOKIE_DAYS * 86400,
     )
 
 
@@ -323,7 +323,9 @@ def scan_page(
     request: Request,
     student: Student = Depends(require_not_banned),
 ) -> Response:
-    return templates.TemplateResponse(request, "scan.html", {})
+    # ``student`` drives the navigation partials in base.html; without it the
+    # scanner page renders with no way off it.
+    return templates.TemplateResponse(request, "scan.html", {"student": student})
 
 
 @router.post("/scan/confirm")

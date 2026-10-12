@@ -1,0 +1,27 @@
+{# Reusable presentation macros.
+
+   An import is NOT inherited: every template that calls ui.icon / ui.avatar
+   needs its own line `{% import "_macros.html" as ui %}` (see base.html and the
+   navigation partials). Icons are inline line-art SVG drawn with presentation
+   attributes only: the CSP forbids inline styles and inline scripts, so none
+   appear anywhere in this file. #}
+
+{% macro icon(name, size=None) %}
+{%- set _paths = {
+    'feed': '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/><path d="M4 22a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 14h-6"/><path d="M15 18h-3"/><path d="M10 6h8v4h-8Z"/>',
+    'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'user': '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    'qr': '<rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>',
+    'menu': '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
+    'close': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    'logout': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+    'google': '<path d="M18 6a8.5 8.5 0 1 0 2.5 6"/><path d="M12 12h8.5"/>',
+    'apple': '<path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>',
+    'check': '<path d="M20 6 9 17l-5-5"/>',
+} -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
+{%- endmacro %}
+
+{% macro avatar(pseudonym, size="") %}
+<span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>
+{%- endmacro %}

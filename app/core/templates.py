@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.core.csrf import csrf_context
+from app.core.ui import avatar_index, avatar_initial
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -12,4 +13,10 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 # has to render ``{{ csrf_token }}`` in a hidden field -- see app.core.csrf.
 templates = Jinja2Templates(
     directory=str(TEMPLATES_DIR), context_processors=[csrf_context]
+)
+
+# Avatar cosmetics are globals: templates call ``avatar_index`` and
+# ``avatar_initial`` directly -- see app.core.ui.
+templates.env.globals.update(
+    avatar_index=avatar_index, avatar_initial=avatar_initial
 )

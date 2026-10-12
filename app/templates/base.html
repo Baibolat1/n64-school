@@ -3,28 +3,21 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Школа{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>{% block title %}Hub 64 — закрытый хаб школы №64{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     {% if student %}
-    <nav class="topnav">
-        <div class="topnav-inner">
-            <span class="topnav-alias">{{ student.alias }}</span>
-            <span class="topnav-links">
-                <a href="/feed">Лента</a>
-                <a href="/scan">Сканер</a>
-                <a href="/me">Профиль</a>
-                <form method="post" action="/logout" class="inline-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit" class="link-button">Выйти</button>
-                </form>
-            </span>
-        </div>
-    </nav>
+    {% include "_topnav.html" %}
     {% endif %}
     <main class="container">
         {% block content %}{% endblock %}
     </main>
+    {% if student %}
+    {% include "_bottomnav.html" %}
+    {% endif %}
 </body>
 </html>

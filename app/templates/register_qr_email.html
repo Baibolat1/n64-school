@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Регистрация по QR{% endblock %}
 {% block content %}
-<h1>Регистрация по QR-коду</h1>
+<section class="card">
+<h1>{{ ui.icon('qr') }} Регистрация по QR-коду</h1>
 <p>Введите email — мы покажем QR-код. Пусть любой ученик сайта отсканирует его
     своим телефоном, чтобы подтвердить вас.</p>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
@@ -14,4 +16,5 @@
     <button type="submit">Показать QR-код</button>
 </form>
 <p class="hint">Уже есть аккаунт? <a href="/login">Войти</a>.</p>
+</section>
 {% endblock %}

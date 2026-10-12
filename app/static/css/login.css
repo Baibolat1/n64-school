@@ -1,0 +1,179 @@
+/* ==========================================================================
+   Login screen only. Loaded from login.html through the extra_css block,
+   after the shared stylesheets. Scoped to .login-page and its children.
+   ========================================================================== */
+
+/* Background: photo when app/static/img/bg.png exists, otherwise the solid
+   --bg-deep colour and the gradient render on their own, so the page never
+   shows an empty white block. The gradient also darkens the photo for
+   contrast. Its rgba stops mirror --bg-deep (#070b14). */
+.login-page {
+    min-height: 100vh;
+    background-color: var(--bg-deep);
+    background-image:
+        linear-gradient(180deg, rgba(7, 11, 20, .72), rgba(7, 11, 20, .96)),
+        url("/static/img/bg.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.login-logo {
+    position: absolute;
+    top: var(--space-5);
+    left: var(--space-5);
+    width: clamp(6rem, 16vw, 9rem);
+    height: auto;
+}
+
+.login-burger {
+    position: absolute;
+    top: var(--space-5);
+    right: var(--space-5);
+}
+
+/* Large vertical slogan along the left edge, reading bottom to top. */
+.login-slogan {
+    position: absolute;
+    left: var(--space-6);
+    bottom: var(--space-7);
+    margin: 0;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--cream);
+    opacity: 0.45;
+    user-select: none;
+}
+
+.login-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: var(--space-6);
+    background: var(--surface-glass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.login-card h1 {
+    margin-bottom: var(--space-4);
+}
+
+.login-card h2 {
+    margin-top: var(--space-5);
+    font-size: var(--step-1);
+}
+
+.login-oauth {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+}
+
+.login-oauth .hint {
+    margin-bottom: var(--space-1);
+}
+
+/* The two lines trailing the card (registration link, invite-code toggle) are
+   siblings of the OAuth block, and the reset leaves them flush against it. */
+.login-card > .hint {
+    margin-top: var(--space-4);
+}
+
+.login-card > details {
+    margin-top: var(--space-3);
+}
+
+/* The login screen is a full-bleed hero: the card is placed by .login-page
+   itself, so undo the shared content column (otherwise flex-end would push the
+   card to the edge of a centred 42rem column instead of the screen edge). */
+.login-page .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Responsive: card on the right of a wide screen, centred on a phone. */
+@media (min-width: 768px) {
+    .login-page {
+        display: flex;
+        align-items: center;
+        padding: var(--space-7);
+    }
+
+    /* The card lives inside <main class="container">, and that column fills the
+       row -- so the column itself has to place the card. Aligning on the body
+       alone would only move the full-width column and leave the card at its
+       left edge. */
+    .login-page .container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+    }
+
+    .login-card {
+        margin: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .login-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-4);
+    }
+
+    /* Stack the hero in the flow instead of pinning it to the corners.
+       Absolutely positioned, the logo and the slogan end up *behind* the card,
+       which is both partly opaque and blurred over them -- on a phone that made
+       them look like they had not rendered at all.
+       `order` is spelled out because the slogan comes before the card in the
+       markup (it reads after it on screen). */
+    .login-page .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .login-logo {
+        position: static;
+        order: 0;
+        width: 7rem;
+        margin-bottom: var(--space-6);
+    }
+
+    .login-card {
+        order: 1;
+        background: var(--surface-glass-soft);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* Vertical type needs an edge to run down; with the card filling the width
+       there is none, so on a phone the slogan becomes a normal line under it. */
+    .login-slogan {
+        position: static;
+        order: 2;
+        margin-top: var(--space-6);
+        writing-mode: horizontal-tb;
+        transform: none;
+        font-size: var(--step-1);
+        letter-spacing: 0.18em;
+        text-align: center;
+        opacity: 0.6;
+    }
+}

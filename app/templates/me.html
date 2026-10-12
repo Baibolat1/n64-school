@@ -1,28 +1,37 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Мой псевдоним{% endblock %}
 {% block content %}
-<h1>Моя страница</h1>
-<p>Ваш псевдоним: <strong>{{ student.alias }}</strong></p>
+<div class="page-header">
+    {{ ui.avatar(student.alias, 'lg') }}
+    <h1>{{ student.alias }}</h1>
+</div>
 
-<h2>Сменить псевдоним</h2>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<section class="card">
+    <h2>Сменить псевдоним</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
-{% if can_change %}
-<form method="post" action="/me/alias" class="stacked-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label for="new_alias">Новый псевдоним</label>
-    <input id="new_alias" name="new_alias" type="text" maxlength="24"
-           autocomplete="off" value="{{ alias_value }}" required>
+    {% if can_change %}
+    <form method="post" action="/me/alias" class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="new_alias">Новый псевдоним</label>
+        <input id="new_alias" name="new_alias" type="text" maxlength="24"
+               autocomplete="off" value="{{ alias_value }}" required>
 
-    <button type="submit">Сохранить</button>
-</form>
-{% else %}
-<p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
-    Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
-{% endif %}
+        <button type="submit">Сохранить</button>
+    </form>
+    {% else %}
+    <p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
+        Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
+    {% endif %}
+</section>
 
-<form method="post" action="/logout">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">Выйти</button>
-</form>
+<section class="card">
+    <h2>Выход</h2>
+    <p class="hint">Вы остаётесь в системе на этом устройстве, пока не выйдете сами.</p>
+    <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="link-button">{{ ui.icon('logout') }} Выйти</button>
+    </form>
+</section>
 {% endblock %}

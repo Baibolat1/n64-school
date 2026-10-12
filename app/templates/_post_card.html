@@ -1,6 +1,8 @@
 {% set comment_count = comment_count|default(0) %}
+{% import "_macros.html" as ui %}
 <article class="post-card">
     <div class="post-meta">
+        {{ ui.avatar(post.display_alias, 'sm') }}
         <span class="post-author">{{ post.display_alias }}</span>
         <time datetime="{{ post.created_at.isoformat() }}">
             {{ post.created_at.strftime('%d.%m.%Y %H:%M') }} UTC

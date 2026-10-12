@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Сканер QR{% endblock %}
 {% block content %}
-<h1>Сканер QR</h1>
+<section class="card">
+<h1>{{ ui.icon('qr') }} Сканер QR</h1>
 <p>Наведите камеру на QR-код новичка, чтобы подтвердить его регистрацию.</p>
 
 <div id="scan-frame">
@@ -16,4 +18,5 @@
 
 <script src="/static/vendor/jsqr.min.js"></script>
 <script src="/static/scan.js"></script>
+</section>
 {% endblock %}

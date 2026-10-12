@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Подтверждение по QR{% endblock %}
 {% block content %}
-<h1>Подтверждение по QR-коду</h1>
+<section class="card">
+<h1>{{ ui.icon('qr') }} Подтверждение по QR-коду</h1>
 
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
@@ -37,18 +39,9 @@
 {% endif %}
 
 {% if status == "pending" %}
-<script>
-    // Poll until an existing student confirms the code, then reload so the
-    // server renders the "set a password" step.
-    setInterval(async function () {
-        try {
-            const response = await fetch("/register/qr/status", {cache: "no-store"});
-            const data = await response.json();
-            if (data.status && data.status !== "pending") {
-                window.location.reload();
-            }
-        } catch (e) { /* transient network error: keep polling */ }
-    }, 4000);
-</script>
+{# Polling lives in an external file: the CSP allows "script-src 'self'" only,
+   so an inline <script> here would be silently dropped. #}
+<script src="/static/register_qr.js"></script>
 {% endif %}
+</section>
 {% endblock %}

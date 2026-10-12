@@ -1,5 +1,6 @@
 """Tests for :class:`app.core.middleware.SecurityHeadersMiddleware`."""
 
+import re
 import sys
 from pathlib import Path
 
@@ -25,9 +26,30 @@ def test_headers_on_every_response(client, path):
 
     csp = response.headers["content-security-policy"]
     assert "default-src 'self'" in csp
-    assert "script-src 'none'" in csp
+    assert "script-src 'self'" in csp
     assert "form-action 'self'" in csp
     assert "frame-ancestors 'none'" in csp
+
+
+def test_no_inline_scripts_in_templates():
+    """Every <script> in a template must have a ``src``.
+
+    The CSP allows ``script-src 'self'`` and nothing else, so an inline block
+    is dropped by the browser with no error anywhere -- the page just quietly
+    stops working. Scanning the templates here turns that into a failing test.
+    """
+    templates = Path(__file__).resolve().parents[1] / "app" / "templates"
+    offenders = []
+    for path in sorted(templates.rglob("*.html")):
+        text = path.read_text(encoding="utf-8")
+        # Jinja comments never reach the browser, and prose in them may well
+        # mention "<script>" while explaining why there must not be one.
+        text = re.sub(r"\{#.*?#\}", "", text, flags=re.S)
+        for match in re.finditer(r"<script\b[^>]*>", text):
+            tag = match.group(0)
+            if "src=" not in tag:
+                offenders.append(f"{path.name}: {tag}")
+    assert offenders == [], f"inline <script> is blocked by the CSP: {offenders}"
 
 
 def test_headers_on_a_refused_csrf_post(client):

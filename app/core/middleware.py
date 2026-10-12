@@ -11,10 +11,15 @@ from app.core import csrf
 # knows better can override a value for one route.
 #
 # * nosniff / DENY / no-referrer need no explanation.
-# * The CSP is deliberately tight: the app has no scripting at all, so
-#   ``script-src 'none'``; ``form-action 'self'`` and ``base-uri 'none'`` close
-#   off form hijacking and <base> games; ``frame-ancestors 'none'`` repeats the
-#   framing ban for browsers that prefer the CSP directive.
+# * The CSP is deliberately tight. ``script-src 'self'`` -- not ``'none'`` --
+#   because two pages need JavaScript: the QR scanner (``static/scan.js`` plus
+#   the vendored ``static/vendor/jsqr.min.js``) and the QR-registration poller
+#   (``static/register_qr.js``). ``'self'`` allows exactly those files and still
+#   refuses inline ``<script>``, ``eval`` and every third-party host, so the
+#   XSS surface stays flat: no template may grow an inline script.
+# * ``form-action 'self'`` and ``base-uri 'none'`` close off form hijacking and
+#   <base> games; ``frame-ancestors 'none'`` repeats the framing ban for
+#   browsers that prefer the CSP directive.
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -23,7 +28,7 @@ _SECURITY_HEADERS = {
         "default-src 'self'; "
         "img-src 'self'; "
         "style-src 'self'; "
-        "script-src 'none'; "
+        "script-src 'self'; "
         "form-action 'self'; "
         "frame-ancestors 'none'; "
         "base-uri 'none'"

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Регистрация{% endblock %}
 {% block content %}
+<section class="card">
 <h1>Регистрация</h1>
 <p>Первые {{ open_limit }} учеников могут зарегистрироваться по email и паролю.
     После этого вход — только по подтверждению от действующего ученика.</p>
@@ -19,4 +20,5 @@
 </form>
 <p class="hint">Уже есть аккаунт? <a href="/login">Войти</a>.
     Есть код приглашения — тоже <a href="/login">там</a>.</p>
+</section>
 {% endblock %}
