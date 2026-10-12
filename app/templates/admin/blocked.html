@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Отказы публикации{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+<h1>Отказы публикации</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+<p class="muted">
+    Жёсткий фильтр ПДн не сохраняет текст отказа: строка помнит только, кто и что
+    публиковал и какие правила сработали. Текста здесь нет и быть не может, а
+    объекта не существует -- публикация не состоялась.
+</p>
+
+{% if rows %}
+{% for row in rows %}
+    <article class="post-card">
+        <p class="post-meta">
+            <span class="post-author">{{ row.student_alias }}</span>
+            <span>{{ row.target_label }}</span>
+            <span>{{ row.attempt.created_at }}</span>
+        </p>
+        <p class="post-body">{{ row.rule_labels|join(", ") }}</p>
+    </article>
+{% endfor %}
+{% else %}
+<p class="muted">Отказов не было</p>
+{% endif %}
+
+{% set pager_base = "/admin/blocked" %}
+{% include "admin/_pager.html" %}
+</section>
+{% endblock %}

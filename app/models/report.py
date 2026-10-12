@@ -16,7 +16,13 @@ from app.db.base import Base
 REPORT_TARGET_TYPES = ("post", "comment", "review")
 REPORT_REASON_CODES = ("spam", "pii", "abuse", "offtopic", "other")
 REPORT_STATUS_OPEN = "open"
-REPORT_STATUSES = (REPORT_STATUS_OPEN, "resolved", "dismissed")
+REPORT_STATUS_RESOLVED = "resolved"
+REPORT_STATUS_DISMISSED = "dismissed"
+REPORT_STATUSES = (
+    REPORT_STATUS_OPEN,
+    REPORT_STATUS_RESOLVED,
+    REPORT_STATUS_DISMISSED,
+)
 
 
 class Report(Base):

@@ -67,3 +67,14 @@ def count_visible_comments(db: Session, post_id: int) -> int:
         )
     )
     return db.execute(stmt).scalar_one()
+
+
+def set_status(db: Session, comment: Comment, status: str) -> None:
+    """Set a comment's lifecycle status (the moderation write path).
+
+    The ``visible`` filter lives inside ``list_visible_comments`` /
+    ``count_visible_comments``, so setting anything else hides the comment from
+    its post at once.
+    """
+    comment.status = status
+    db.flush()

@@ -66,3 +66,14 @@ def count_visible_posts(db: Session) -> int:
         .where(Post.status == CONTENT_STATUS_VISIBLE)
     )
     return db.execute(stmt).scalar_one()
+
+
+def set_status(db: Session, post: Post, status: str) -> None:
+    """Set a post's lifecycle status (the moderation write path).
+
+    The ``visible`` filter lives inside ``list_visible_posts`` /
+    ``count_visible_posts``, so setting anything else hides the post from the
+    feed and its count at once.
+    """
+    post.status = status
+    db.flush()

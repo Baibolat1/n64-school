@@ -1,4 +1,4 @@
-"""Admin authentication routes (login, logout, dashboard stub)."""
+"""Admin routes: authentication and the moderation screens."""
 
 from typing import Annotated
 
@@ -11,6 +11,10 @@ from app.core.deps import client_ip, require_admin, require_csrf
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.admin import Admin
+from app.repositories import pii_blocked as pii_blocked_repo
+from app.repositories import pii_flags as pii_flags_repo
+from app.repositories import reports as reports_repo
+from app.repositories import students as students_repo
 from app.schemas.admin import AdminLogin, AdminOut
 from app.services import admin_auth
 from app.services import invites as invites_service
@@ -93,11 +97,19 @@ def logout_submit(
 def dashboard(
     request: Request,
     admin: Admin = Depends(require_admin),
+    db: Session = Depends(get_db),
 ) -> Response:
+    """Moderation overview: one counter per queue, each linking into it."""
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
-        {"admin": AdminOut.model_validate(admin)},
+        {
+            "admin": AdminOut.model_validate(admin),
+            "open_reports": reports_repo.count_open(db),
+            "open_pii_flags": pii_flags_repo.count_open(db),
+            "pii_blocked_attempts": pii_blocked_repo.count_all(db),
+            "banned_students": students_repo.count_banned(db),
+        },
     )
 
 

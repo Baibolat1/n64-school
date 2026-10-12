@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Открытые флаги ПДн{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+<h1>Открытые флаги ПДн</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+
+{% if rows %}
+{% for row in rows %}
+    <article class="post-card">
+        <p class="post-meta">
+            <span class="post-author">{{ row.rule_label }}</span>
+            <span>{{ row.flag.created_at }}</span>
+            {% if row.target_flag_count > 1 %}
+            <span class="muted">Флагов на объект: {{ row.target_flag_count }}</span>
+            {% endif %}
+        </p>
+        <p class="post-body">{{ row.flag.snippet }}</p>
+        <p class="post-meta">
+            <span>{{ row.target_label }}</span>
+            {% if row.target %}
+            <span class="post-author">{{ row.target.display_alias }}</span>
+            {% if row.status_label %}<span class="muted">{{ row.status_label }}</span>{% endif %}
+            {% else %}
+            <span class="muted">Объект не найден</span>
+            {% endif %}
+        </p>
+        {% if row.target %}
+        <p><a href="/admin/content/{{ row.flag.target_type }}/{{ row.flag.target_id }}">Открыть</a></p>
+        {% endif %}
+        <form method="post" action="/admin/pii-flags/{{ row.flag.id }}/resolve"
+              class="stacked-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="/admin/pii?page={{ page }}">
+            <button type="submit">Принять</button>
+        </form>
+        <form method="post" action="/admin/pii-flags/{{ row.flag.id }}/dismiss"
+              class="stacked-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="/admin/pii?page={{ page }}">
+            <button type="submit">Отклонить</button>
+        </form>
+    </article>
+{% endfor %}
+{% else %}
+<p class="muted">Открытых флагов ПДн нет</p>
+{% endif %}
+
+{% set pager_base = "/admin/pii" %}
+{% include "admin/_pager.html" %}
+</section>
+{% endblock %}

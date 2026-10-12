@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ student.alias }} — Модерация{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<h1>{{ student.alias }}</h1>
+<p class="back-link">
+    <a href="/admin">&larr; В панель администратора</a>
+</p>
+<p class="muted">
+    Псевдоним — единственное, что известно об ученике: реальных имён в системе
+    нет, поэтому связать учётную запись с человеком по этой странице нельзя.
+</p>
+
+<h2>Состояние</h2>
+<p class="post-meta">
+    <span class="post-author">{{ student.alias }}</span>
+    {% if student.is_banned %}
+    <span class="muted">Заблокирован{% if student.banned_reason %}: {{ student.banned_reason }}{% endif %}</span>
+    {% else %}
+    <span class="muted">Не заблокирован</span>
+    {% endif %}
+</p>
+<p class="post-meta">
+    <span class="muted">Регистрация: {{ student.created_at }}</span>
+    <span class="muted">Последний визит: {% if student.last_seen_at %}{{ student.last_seen_at }}{% else %}не заходил{% endif %}</span>
+</p>
+
+{# Одна форма на состояние: заблокированного можно только разблокировать, а
+   свободного -- только заблокировать. Заметка у обеих: при бане она становится
+   причиной, при разбане просто остаётся в следе. #}
+<h2>{% if student.is_banned %}Разблокировка{% else %}Блокировка{% endif %}</h2>
+{% if student.is_banned %}
+<form method="post" action="/admin/students/{{ student.id }}/unban"
+      class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next" value="/admin/students/{{ student.id }}">
+    <label for="note">Заметка (необязательно)</label>
+    <textarea id="note" name="note" rows="3"
+              maxlength="{{ max_note_length }}"></textarea>
+    <p class="muted">Заметка попадёт в след и не сохраняется как причина:
+        причина исчезнет вместе с блокировкой.</p>
+    <button type="submit">Разблокировать</button>
+</form>
+{% else %}
+<form method="post" action="/admin/students/{{ student.id }}/ban"
+      class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next" value="/admin/students/{{ student.id }}">
+    <label for="note">Причина блокировки (необязательно)</label>
+    <textarea id="note" name="note" rows="3"
+              maxlength="{{ max_note_length }}"></textarea>
+    <p class="muted">Заметка станет причиной блокировки.</p>
+    <button type="submit">Заблокировать</button>
+</form>
+{% endif %}
+
+<h2>Что делали модераторы</h2>
+{% if trail_rows %}
+{% for row in trail_rows %}
+<article class="post-card">
+    <p class="post-meta">
+        <span class="post-author">{{ row.action_label }}</span>
+        <span>{{ row.entry.admin_username }}</span>
+        <span>{{ row.entry.action.created_at }}</span>
+    </p>
+    {% if row.entry.action.note %}
+    <p class="post-body">{{ row.entry.action.note }}</p>
+    {% endif %}
+    {% if row.hub_url %}
+    <p><a href="{{ row.hub_url }}">Открыть объект</a></p>
+    {% endif %}
+</article>
+{% endfor %}
+{% else %}
+<p class="muted">Действий по ученику не было</p>
+{% endif %}
+</section>
+{% endblock %}

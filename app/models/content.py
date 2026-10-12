@@ -13,11 +13,12 @@ CONTENT_STATUS_VISIBLE = "visible"
 # Set by a moderator in stage 12; used here so callers (and tests) do not have
 # to spell the string out.
 CONTENT_STATUS_HIDDEN = "hidden"
+CONTENT_STATUS_DELETED = "deleted"
 CONTENT_STATUSES = (
     CONTENT_STATUS_VISIBLE,
     "pending",
     CONTENT_STATUS_HIDDEN,
-    "deleted",
+    CONTENT_STATUS_DELETED,
 )
 
 

@@ -22,15 +22,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app.models  # noqa: F401,E402  (registers every table on Base.metadata)
 from app.config import settings  # noqa: E402
+from app.core.security import hash_password  # noqa: E402
 from app.db.base import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.student import Student  # noqa: E402
-from app.services import student_auth  # noqa: E402
+from app.repositories.admins import create_admin  # noqa: E402
+from app.services import admin_auth, student_auth  # noqa: E402
 from app.services.rate_limit import limiter  # noqa: E402
 
 # The hidden field every form renders. Matching it in the page is how a test
 # gets a token that goes with the CSRF cookie the same response set.
 _CSRF_FIELD_RE = re.compile(r'name="csrf_token" value="([^"]*)"')
+
+# Credentials of the admin every ``admin``-fixture test logs in as.
+ADMIN_USERNAME = "moderator"
+ADMIN_PASSWORD = "тестовый-пароль-123"
 
 
 def extract_csrf(html: str) -> str:
@@ -41,11 +47,10 @@ def extract_csrf(html: str) -> str:
 
 
 @dataclass
-class StudentSession:
-    """A client already carrying a student session, plus that student's id."""
+class FormSession:
+    """A client carrying a session cookie, plus the helpers form tests need."""
 
     client: TestClient
-    student_id: int
 
     def csrf_for(self, page: str) -> str:
         """Visit ``page`` and return the token from the form on it.
@@ -65,6 +70,21 @@ class StudentSession:
             follow_redirects=False,
             **kwargs,
         )
+
+
+@dataclass
+class StudentSession(FormSession):
+    """A client already carrying a student session, plus that student's id."""
+
+    student_id: int
+
+
+@dataclass
+class AdminSession(FormSession):
+    """A client already carrying an admin session, plus that admin's id."""
+
+    admin_id: int
+    username: str
 
 
 @pytest.fixture()
@@ -126,3 +146,35 @@ def student(client, session_factory):
     # clear.
     client.cookies.set(settings.STUDENT_COOKIE_NAME, token, domain="testserver.local")
     return StudentSession(client=client, student_id=student_id)
+
+
+@pytest.fixture()
+def admin(client, session_factory):
+    """Create an admin and return a *separate* logged-in client for them.
+
+    ``client`` is taken as a dependency because that fixture is what installs
+    the database override and resets the limiter. The returned client is a second
+    instance sharing that override and its own cookie jar, so one test can hold
+    a student session and an admin session at once -- which is exactly what the
+    "a student must not reach /admin" checks need.
+
+    The session is obtained through :func:`admin_auth.login` rather than by
+    writing the row by hand, so the cookie under test is one the real login
+    really issued.
+    """
+    with session_factory() as db:
+        admin_row = create_admin(
+            db, username=ADMIN_USERNAME, password_hash=hash_password(ADMIN_PASSWORD)
+        )
+        db.commit()
+        admin_id = admin_row.id
+        token = admin_auth.login(db, ADMIN_USERNAME, ADMIN_PASSWORD)
+    assert token is not None
+
+    with TestClient(app) as admin_client:
+        admin_client.cookies.set(
+            settings.SESSION_COOKIE_NAME, token, domain="testserver.local"
+        )
+        yield AdminSession(
+            client=admin_client, admin_id=admin_id, username=ADMIN_USERNAME
+        )

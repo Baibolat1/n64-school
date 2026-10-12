@@ -186,6 +186,40 @@
     color: var(--cream);
 }
 
+/* Admin navigation --------------------------------------------------------- */
+
+/* The moderation section has no bottom bar: unlike a student, a moderator must
+   be able to jump between the queues at any width, so this menu is never
+   touched by the responsive switch below. The links wrap onto a second line
+   rather than scroll off the edge of a phone. */
+.admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-5);
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-deep);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    font-size: var(--step--1);
+}
+
+.admin-nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.admin-nav a:hover {
+    color: var(--cream);
+    text-decoration: underline;
+}
+
+.admin-nav .is-active {
+    color: var(--cream);
+}
+
 /* Responsive switch: top bar on wide screens, bottom bar on phones. --------- */
 
 @media (min-width: 768px) {

@@ -10,6 +10,7 @@ from app.core.deps import StudentBlockedError
 from app.core.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 from app.core.templates import templates
 from app.routers import admin as admin_router
+from app.routers import admin_moderation as admin_moderation_router
 from app.routers import auth as auth_router
 from app.routers import feed as feed_router
 from app.routers import register as register_router
@@ -33,6 +34,7 @@ app.include_router(feed_router.router)
 app.include_router(teachers_router.router)
 app.include_router(reports_router.router)
 app.include_router(admin_router.router)
+app.include_router(admin_moderation_router.router)
 
 
 @app.exception_handler(StudentBlockedError)

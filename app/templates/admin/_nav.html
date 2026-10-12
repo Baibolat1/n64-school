@@ -1,0 +1,20 @@
+{# Общая навигация админского раздела, подключается в начале {% block content %}
+   всех админских шаблонов, кроме страницы входа. В отличие от студенческого
+   меню её видят на любой ширине: модератор должен попадать в любую очередь
+   прямо отсюда, а не только через панель. Раскладка — в layout.css (.admin-nav).
+
+   Активный пункт вычисляется по request.url.path, то есть без строки запроса:
+   очередь с ?page=2 остаётся подсвеченной. Панель совпадает только точно с
+   /admin -- у неё нет своих вложенных адресов, а сравнение с префиксом закрыло
+   бы весь раздел. У очередей сравнение с префиксом, но чужие вложенные адреса
+   (карточка объекта, страница ученика) не лежат ни под одной из них, поэтому
+   не подсвечивают ничего. #}
+{% set path = request.url.path %}
+<nav class="admin-nav" aria-label="Разделы администрирования">
+    <a href="/admin"{% if path == '/admin' %} class="is-active"{% endif %}>Панель</a>
+    <a href="/admin/reports"{% if path == '/admin/reports' or path.startswith('/admin/reports/') %} class="is-active"{% endif %}>Жалобы</a>
+    <a href="/admin/pii"{% if path == '/admin/pii' or path.startswith('/admin/pii/') %} class="is-active"{% endif %}>ПДн</a>
+    <a href="/admin/blocked"{% if path == '/admin/blocked' or path.startswith('/admin/blocked/') %} class="is-active"{% endif %}>Отказы</a>
+    <a href="/admin/audit"{% if path == '/admin/audit' or path.startswith('/admin/audit/') %} class="is-active"{% endif %}>Журнал</a>
+    <a href="/admin/invites"{% if path == '/admin/invites' or path.startswith('/admin/invites/') %} class="is-active"{% endif %}>Коды</a>
+</nav>

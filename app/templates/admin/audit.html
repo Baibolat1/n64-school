@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Журнал действий{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+<h1>Журнал действий</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+<p class="muted">
+    Полный след модерации: кто, когда, что сделал и с чем. Записи не
+    редактируются и не удаляются, поэтому журнал остаётся точным.
+</p>
+
+{% if rows %}
+{% for row in rows %}
+    <article class="post-card">
+        <p class="post-meta">
+            <span class="post-author">{{ row.action_label }}</span>
+            <span>{{ row.target_label }} №{{ row.entry.action.target_id }}</span>
+            <span>{{ row.entry.admin_username }}</span>
+            <span>{{ row.entry.action.created_at }}</span>
+        </p>
+        {% if row.entry.action.note %}
+        <p class="post-body">{{ row.entry.action.note }}</p>
+        {% endif %}
+        {% if row.link_url %}
+        <p><a href="{{ row.link_url }}">Открыть</a></p>
+        {% endif %}
+    </article>
+{% endfor %}
+{% else %}
+<p class="muted">Действий пока не было</p>
+{% endif %}
+
+{% set pager_base = "/admin/audit" %}
+{% include "admin/_pager.html" %}
+</section>
+{% endblock %}

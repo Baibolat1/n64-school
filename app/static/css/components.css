@@ -535,3 +535,48 @@ main section > h2 {
     max-height: 70vh;
     object-fit: cover;
 }
+
+/* Moderation dashboard: one counter per queue, each a link into its queue. -- */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-m);
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+
+a.stat-card:hover {
+    border-color: var(--line-strong);
+    text-decoration: none;
+}
+
+/* The number is what the eye lands on; a live queue reads in the accent tone. */
+.stat-value {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    line-height: 1;
+    color: var(--cream);
+}
+
+/* An empty queue is the norm, not a call to act: keep its number quiet. */
+.stat-card[data-count="0"] .stat-value {
+    color: var(--text-dim);
+}
+
+.stat-label {
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}

@@ -128,7 +128,10 @@ def _resolve_review(db: Session, target_id: int) -> ReportTarget | None:
 
 # Which kinds of content can be complained about, and how each one is found.
 # Keyed by the same codes the moderation trail uses (``app.models.audit``), so a
-# complaint's target_type means the same thing everywhere.
+# complaint's target_type means the same thing everywhere. This map is filtered
+# to visible content on purpose; moderation has its own reader without that
+# filter -- ``resolve_moderation_target`` in ``app.services.moderation``. When a
+# new kind of content is added, both maps must be extended.
 _TARGET_RESOLVERS: dict[str, Callable[[Session, int], ReportTarget | None]] = {
     TARGET_POST: _resolve_post,
     TARGET_COMMENT: _resolve_comment,

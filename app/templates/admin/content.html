@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}{{ target_label }} — Модерация{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<h1>{{ target_label }} №{{ target.target_id }}</h1>
+<p class="back-link">
+    <a href="/admin">&larr; В панель администратора</a>
+    <a href="/admin/reports">Очередь жалоб</a>
+</p>
+
+<article class="post-card">
+    <p class="post-meta">
+        <span class="post-author">{{ target.display_alias }}</span>
+        <span class="muted">{{ status_label }}</span>
+    </p>
+    <p class="post-body">{{ target.body }}</p>
+    <p class="post-meta">
+        {% if target.context_available %}
+        <a href="{{ target.context_url }}">Открыть на сайте</a>
+        {% else %}
+        <span class="muted">Публичная страница недоступна: объект скрыт или удалён</span>
+        {% endif %}
+    </p>
+</article>
+
+<h2>Автор</h2>
+{% if author %}
+<p class="post-meta">
+    <span class="post-author">{{ author.alias }}</span>
+    {% if author.is_banned %}
+    <span class="muted">Заблокирован{% if author.banned_reason %}: {{ author.banned_reason }}{% endif %}</span>
+    {% endif %}
+    <a href="/admin/students/{{ author.id }}">Страница ученика</a>
+</p>
+{% else %}
+<p class="muted">Автор не найден</p>
+{% endif %}
+
+<h2>Жалобы на объект</h2>
+{% if report_rows %}
+{% for row in report_rows %}
+<article class="post-card">
+    <p class="post-meta">
+        <span class="post-author">{{ row.reporter_alias }}</span>
+        <span>{{ row.reason_label }}</span>
+        <span>{{ row.report.created_at }}</span>
+    </p>
+    {% if row.report.comment %}
+    <p class="post-body">{{ row.report.comment }}</p>
+    {% endif %}
+    <form method="post" action="/admin/reports/{{ row.report.id }}/dismiss"
+          class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next"
+               value="/admin/content/{{ target.target_type }}/{{ target.target_id }}">
+        <button type="submit">Отклонить жалобу</button>
+    </form>
+</article>
+{% endfor %}
+{% else %}
+<p class="muted">Открытых жалоб нет</p>
+{% endif %}
+
+<h2>Флаги ПДн</h2>
+{% if flag_rows %}
+{% for row in flag_rows %}
+<article class="post-card">
+    <p class="post-meta">
+        <span class="post-author">{{ row.rule_label }}</span>
+        <span>{{ row.flag.created_at }}</span>
+    </p>
+    <p class="post-body">{{ row.flag.snippet }}</p>
+    <form method="post" action="/admin/pii-flags/{{ row.flag.id }}/resolve"
+          class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next"
+               value="/admin/content/{{ target.target_type }}/{{ target.target_id }}">
+        <button type="submit">Принять</button>
+    </form>
+    <form method="post" action="/admin/pii-flags/{{ row.flag.id }}/dismiss"
+          class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next"
+               value="/admin/content/{{ target.target_type }}/{{ target.target_id }}">
+        <button type="submit">Отклонить</button>
+    </form>
+</article>
+{% endfor %}
+{% else %}
+<p class="muted">Открытых флагов ПДн нет</p>
+{% endif %}
+
+<h2>Что уже делали</h2>
+{% if trail_rows %}
+{% for row in trail_rows %}
+<article class="post-card">
+    <p class="post-meta">
+        <span class="post-author">{{ row.action_label }}</span>
+        <span>{{ row.entry.admin_username }}</span>
+        <span>{{ row.entry.action.created_at }}</span>
+    </p>
+    {% if row.entry.action.note %}
+    <p class="post-body">{{ row.entry.action.note }}</p>
+    {% endif %}
+</article>
+{% endfor %}
+{% else %}
+<p class="muted">Действий по объекту не было</p>
+{% endif %}
+
+{# Форма решения по объекту. Набор радиокнопок зависит от статуса: вернуть в
+   ленту можно только скрытое, а удалённый объект не вернуть -- по нему остаётся
+   лишь блокировка автора. Опцию блокировки не показываем, если автора нет или
+   он уже заблокирован: банить некого или незачем. #}
+{% set can_ban = author and not author.is_banned %}
+{% set can_decide = target.status != 'deleted' or can_ban %}
+<h2 id="decision-form">Решение</h2>
+{% if can_decide %}
+<form method="post"
+      action="/admin/content/{{ target.target_type }}/{{ target.target_id }}/decide"
+      class="stacked-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next"
+           value="/admin/content/{{ target.target_type }}/{{ target.target_id }}">
+
+    <fieldset class="rating-field">
+        <legend>Решение по объекту</legend>
+        {% if target.status == 'deleted' %}
+        <label class="checkbox">
+            <input type="radio" name="decision" value="ban" required>
+            Забанить автора
+        </label>
+        <p class="muted">Удалённый объект вернуть нельзя</p>
+        {% else %}
+        {% if target.status == 'hidden' %}
+        <label class="checkbox">
+            <input type="radio" name="decision" value="restore" required>
+            Вернуть в ленту
+        </label>
+        {% else %}
+        <label class="checkbox">
+            <input type="radio" name="decision" value="hide" required>
+            Скрыть
+        </label>
+        {% endif %}
+        <label class="checkbox">
+            <input type="radio" name="decision" value="delete">
+            Удалить
+        </label>
+        {% if can_ban %}
+        <label class="checkbox">
+            <input type="radio" name="decision" value="ban">
+            Забанить автора
+        </label>
+        {% else %}
+        <p class="muted">
+            {% if author %}Автор уже заблокирован{% else %}Автор не найден{% endif %}
+        </p>
+        {% endif %}
+        {% endif %}
+    </fieldset>
+
+    <label for="note">Заметка (необязательно)</label>
+    <textarea id="note" name="note" rows="3"
+              maxlength="{{ max_note_length }}"></textarea>
+    <p class="muted">Заметка станет причиной блокировки, если выбрать блокировку.</p>
+    <p class="muted">Решение по объекту закроет все открытые жалобы на него.</p>
+    <button type="submit">Применить</button>
+</form>
+{% else %}
+<p class="muted">Удалённый объект вернуть нельзя, а автора банить нечего:
+    доступных решений не осталось.</p>
+{% endif %}
+</section>
+{% endblock %}

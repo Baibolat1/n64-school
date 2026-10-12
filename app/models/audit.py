@@ -5,16 +5,34 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+ACTION_HIDE = "hide"
+ACTION_RESTORE = "restore"
+ACTION_DELETE = "delete"
+ACTION_BAN = "ban"
+ACTION_UNBAN = "unban"
+ACTION_DISMISS_REPORT = "dismiss_report"
+ACTION_RESOLVE_REPORT = "resolve_report"
+ACTION_RESOLVE_PII_FLAG = "resolve_pii_flag"
+ACTION_DISMISS_PII_FLAG = "dismiss_pii_flag"
 MODERATION_ACTIONS = (
-    "hide",
-    "restore",
-    "delete",
-    "ban",
-    "unban",
-    "dismiss_report",
-    "resolve_report",
+    ACTION_HIDE,
+    ACTION_RESTORE,
+    ACTION_DELETE,
+    ACTION_BAN,
+    ACTION_UNBAN,
+    ACTION_DISMISS_REPORT,
+    ACTION_RESOLVE_REPORT,
+    ACTION_RESOLVE_PII_FLAG,
+    ACTION_DISMISS_PII_FLAG,
 )
-PII_FLAG_STATUSES = ("open", "resolved", "dismissed")
+PII_FLAG_STATUS_OPEN = "open"
+PII_FLAG_STATUS_RESOLVED = "resolved"
+PII_FLAG_STATUS_DISMISSED = "dismissed"
+PII_FLAG_STATUSES = (
+    PII_FLAG_STATUS_OPEN,
+    PII_FLAG_STATUS_RESOLVED,
+    PII_FLAG_STATUS_DISMISSED,
+)
 
 # What a moderation action or a PII flag points at. ``target_id`` is the primary
 # key in the table named here.
@@ -22,6 +40,8 @@ TARGET_POST = "post"
 TARGET_COMMENT = "comment"
 TARGET_REVIEW = "review"
 TARGET_STUDENT = "student"
+TARGET_REPORT = "report"
+TARGET_PII_FLAG = "pii_flag"
 
 
 class ModerationAction(Base):
@@ -57,7 +77,9 @@ class PiiFlag(Base):
     rule_code: Mapped[str] = mapped_column(Text, nullable=False)
     # Truncated fragment only, never the full text.
     snippet: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(Text, nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, default=PII_FLAG_STATUS_OPEN
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

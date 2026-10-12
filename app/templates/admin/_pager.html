@@ -1,0 +1,19 @@
+{# Нейтральный пагинатор для админских очередей.
+
+   Работает от ``pager_base``, ``page`` и ``total_pages``: базовый URL задаёт
+   вызывающий шаблон через ``{% set pager_base = "/admin/reports" %}`` прямо
+   перед include (include видит локальные переменные). Так один и тот же
+   партиал переиспользуют все очереди модерации. #}
+<nav class="pagination" aria-label="Постраничная навигация">
+    {% if page > 1 %}
+    <a href="{{ pager_base }}?page={{ page - 1 }}">Позже</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+    <span class="muted">Страница {{ page }} из {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ pager_base }}?page={{ page + 1 }}">Раньше</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+</nav>

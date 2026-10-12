@@ -1,9 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Панель администратора{% endblock %}
 {% block content %}
+{% include "admin/_nav.html" %}
 <section class="card">
 <h1>Панель администратора</h1>
 <p>Вы вошли как <strong>{{ admin.username }}</strong>.</p>
+
+<h2>Модерация</h2>
+<div class="stat-grid">
+    <a class="stat-card" href="/admin/reports" data-count="{{ open_reports }}">
+        <span class="stat-value">{{ open_reports }}</span>
+        <span class="stat-label">Открытые жалобы</span>
+    </a>
+    <a class="stat-card" href="/admin/pii" data-count="{{ open_pii_flags }}">
+        <span class="stat-value">{{ open_pii_flags }}</span>
+        <span class="stat-label">Открытые флаги ПДн</span>
+    </a>
+    <a class="stat-card" href="/admin/blocked" data-count="{{ pii_blocked_attempts }}">
+        <span class="stat-value">{{ pii_blocked_attempts }}</span>
+        <span class="stat-label">Отказы публикации (ПДн)</span>
+    </a>
+    <div class="stat-card" data-count="{{ banned_students }}">
+        <span class="stat-value">{{ banned_students }}</span>
+        <span class="stat-label">Заблокированные ученики</span>
+    </div>
+</div>
+
 <p><a href="/admin/invites">Коды приглашений</a></p>
 <form method="post" action="/admin/logout">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

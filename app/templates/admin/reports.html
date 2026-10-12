@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Открытые жалобы{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+<h1>Открытые жалобы</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+
+{% if rows %}
+{% for row in rows %}
+    <article class="post-card">
+        <p class="post-meta">
+            <span class="post-author">{{ row.reporter_alias }}</span>
+            <span>{{ row.reason_label }}</span>
+            <span>{{ row.report.created_at }}</span>
+            {% if row.target_report_count > 1 %}
+            <span class="muted">Жалоб на объект: {{ row.target_report_count }}</span>
+            {% endif %}
+        </p>
+        {% if row.report.comment %}
+        <p class="post-body">{{ row.report.comment }}</p>
+        {% endif %}
+        <p class="post-meta">
+            <span>{{ row.target_label }}</span>
+            {% if row.target %}
+            <span class="post-author">{{ row.target.display_alias }}</span>
+            {% if row.status_label %}<span class="muted">{{ row.status_label }}</span>{% endif %}
+            {% endif %}
+        </p>
+        {% if row.target %}
+        <p class="post-body">{{ row.target.body|truncate(160) }}</p>
+        {% else %}
+        <p class="muted">Объект не найден</p>
+        {% endif %}
+        {% if row.target %}
+        <p><a href="/admin/content/{{ row.report.target_type }}/{{ row.report.target_id }}">Открыть</a></p>
+        {% endif %}
+    </article>
+{% endfor %}
+{% else %}
+<p class="muted">Открытых жалоб нет</p>
+{% endif %}
+
+{% set pager_base = "/admin/reports" %}
+{% include "admin/_pager.html" %}
+</section>
+{% endblock %}

@@ -85,6 +85,18 @@ def create_review(
     return review
 
 
+def set_status(db: Session, review: Review, status: str) -> None:
+    """Set a review's lifecycle status (the moderation write path).
+
+    The ``visible`` filter lives inside ``list_visible_reviews`` /
+    ``count_visible_reviews`` *and* inside the average queries, so setting
+    anything else removes the review from its teacher's page and from the
+    statistics at once.
+    """
+    review.status = status
+    db.flush()
+
+
 def replace_scores(db: Session, review_id: int, scores: dict[int, int]) -> None:
     """Set the review's scores to exactly ``scores`` (criterion id -> score).
 
