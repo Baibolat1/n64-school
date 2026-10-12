@@ -33,6 +33,17 @@ def create_comment(
     return comment
 
 
+def get_comment(db: Session, comment_id: int) -> Comment | None:
+    """Return the comment with ``comment_id`` regardless of status, or None.
+
+    Status is deliberately not filtered here: the caller decides what a
+    non-visible comment means (the reports service refuses it like a
+    non-existent one, so the endpoint cannot be used to probe what a moderator
+    has hidden).
+    """
+    return db.get(Comment, comment_id)
+
+
 def list_visible_comments(db: Session, post_id: int) -> list[Comment]:
     """Visible comments of a post, oldest first (natural reading order)."""
     stmt = (

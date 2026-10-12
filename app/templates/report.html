@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Жалоба{% endblock %}
+{% block content %}
+<p class="back-link"><a href="{{ target.back_url }}">← Назад</a></p>
+
+<h1>Жалоба</h1>
+<p class="muted">Жалоба уйдёт модератору вместе со ссылкой на то, на что вы
+    жалуетесь. Он посмотрит и решит, что делать.</p>
+
+<section class="card">
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="/report/{{ target.target_type }}/{{ target.target_id }}"
+          class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {# The reason list comes from the service, not from this template: which
+           reasons exist and how they are worded is one mapping in
+           app/services/reports.py. #}
+        <fieldset class="rating-field">
+            <legend>Причина</legend>
+            {% for code, label in reasons.items() %}
+            <label class="checkbox">
+                <input type="radio" name="reason_code" value="{{ code }}"
+                       {% if loop.first %}required{% endif %}
+                       {% if code == reason_code %}checked{% endif %}>
+                {{ label }}
+            </label>
+            {% endfor %}
+        </fieldset>
+
+        <label for="comment">Комментарий (необязательно)</label>
+        <textarea id="comment" name="comment" rows="3"
+                  maxlength="{{ max_comment_length }}">{{ comment or '' }}</textarea>
+
+        <button type="submit">Отправить жалобу</button>
+    </form>
+</section>
+{% endblock %}

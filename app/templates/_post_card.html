@@ -11,5 +11,10 @@
     <p class="post-body">{{ post.body }}</p>
     <p class="post-footer">
         <a href="/feed/posts/{{ post.id }}">Комментарии ({{ comment_count }})</a>
+        {# No complaint button on your own content: the route refuses it too
+           (403), this only keeps the form from offering what it cannot do. #}
+        {% if student and student.id != post.author_id %}
+        <a href="/report/post/{{ post.id }}">Пожаловаться</a>
+        {% endif %}
     </p>
 </article>

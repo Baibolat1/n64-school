@@ -15,7 +15,8 @@ from app.db.base import Base
 
 REPORT_TARGET_TYPES = ("post", "comment", "review")
 REPORT_REASON_CODES = ("spam", "pii", "abuse", "offtopic", "other")
-REPORT_STATUSES = ("open", "resolved", "dismissed")
+REPORT_STATUS_OPEN = "open"
+REPORT_STATUSES = (REPORT_STATUS_OPEN, "resolved", "dismissed")
 
 
 class Report(Base):
@@ -38,7 +39,9 @@ class Report(Base):
     target_id: Mapped[int] = mapped_column(Integer, nullable=False)
     reason_code: Mapped[str] = mapped_column(Text, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(Text, nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, default=REPORT_STATUS_OPEN
+    )
     resolved_by: Mapped[int | None] = mapped_column(
         ForeignKey("admins.id"), nullable=True
     )

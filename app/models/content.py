@@ -10,7 +10,15 @@ from app.db.base import Base
 # migration. "pending" is only used for content held back by the PII filter;
 # reviews are visible immediately (post-moderation).
 CONTENT_STATUS_VISIBLE = "visible"
-CONTENT_STATUSES = ("visible", "pending", "hidden", "deleted")
+# Set by a moderator in stage 12; used here so callers (and tests) do not have
+# to spell the string out.
+CONTENT_STATUS_HIDDEN = "hidden"
+CONTENT_STATUSES = (
+    CONTENT_STATUS_VISIBLE,
+    "pending",
+    CONTENT_STATUS_HIDDEN,
+    "deleted",
+)
 
 
 class Post(Base):

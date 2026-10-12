@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Жалоба отправлена{% endblock %}
+{% block content %}
+<section class="card">
+    <h1>Жалоба отправлена</h1>
+    <p>Спасибо. Жалоба «{{ reason_label }}» у модератора — он посмотрит и решит,
+        что делать.</p>
+    <p class="post-footer">
+        <a href="{{ target.back_url }}">← Вернуться</a>
+    </p>
+</section>
+{% endblock %}

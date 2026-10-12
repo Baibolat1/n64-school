@@ -25,4 +25,9 @@
     </ul>
     {% endif %}
     <p class="post-body">{{ review.comment }}</p>
+    {% if student and student.id != review.student_id %}
+    <p class="post-footer">
+        <a href="/report/review/{{ review.id }}">Пожаловаться</a>
+    </p>
+    {% endif %}
 </article>

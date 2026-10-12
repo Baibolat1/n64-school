@@ -13,6 +13,11 @@
         </time>
     </div>
     <p class="post-body">{{ post.body }}</p>
+    {% if student.id != post.author_id %}
+    <p class="post-footer">
+        <a href="/report/post/{{ post.id }}">Пожаловаться</a>
+    </p>
+    {% endif %}
 </article>
 
 <section class="comments">
@@ -28,6 +33,11 @@
                 </time>
             </div>
             <p class="comment-body">{{ comment.body }}</p>
+            {% if student.id != comment.author_id %}
+            <p class="post-footer">
+                <a href="/report/comment/{{ comment.id }}">Пожаловаться</a>
+            </p>
+            {% endif %}
         </article>
         {% endfor %}
     {% else %}

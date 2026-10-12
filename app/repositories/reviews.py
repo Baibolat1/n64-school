@@ -54,6 +54,15 @@ def get_review(db: Session, student_id: int, teacher_id: int) -> Review | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
+def get_review_by_id(db: Session, review_id: int) -> Review | None:
+    """Return the review with ``review_id`` regardless of status, or None.
+
+    Status is deliberately not filtered here; the caller decides what to do
+    with a hidden review (the reports service treats it as non-existent).
+    """
+    return db.get(Review, review_id)
+
+
 def create_review(
     db: Session,
     *,

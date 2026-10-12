@@ -13,6 +13,7 @@ from app.routers import admin as admin_router
 from app.routers import auth as auth_router
 from app.routers import feed as feed_router
 from app.routers import register as register_router
+from app.routers import reports as reports_router
 from app.routers import teachers as teachers_router
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -30,6 +31,7 @@ app.include_router(auth_router.router)
 app.include_router(register_router.router)
 app.include_router(feed_router.router)
 app.include_router(teachers_router.router)
+app.include_router(reports_router.router)
 app.include_router(admin_router.router)
 
 
