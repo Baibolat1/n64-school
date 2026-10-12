@@ -40,7 +40,7 @@ def _set_session_cookie(response: Response, raw_token: str) -> None:
         samesite="lax",
         secure=settings.COOKIE_SECURE,
         path="/",
-        max_age=settings.STUDENT_SESSION_TTL_DAYS * 86400,
+        max_age=settings.STUDENT_SESSION_COOKIE_DAYS * 86400,
     )
 
 

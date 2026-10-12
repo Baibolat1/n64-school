@@ -37,8 +37,13 @@ class Settings(BaseSettings):
     # novice's plaintext QR token so their own browser can re-render, refresh
     # and poll it. It is not a session and grants no access on its own.
     QR_COOKIE_NAME: str = "qr_registration"
-    # Student session lifetime in days (used as the signed cookie's max_age).
-    STUDENT_SESSION_TTL_DAYS: int = 30
+    # Lifetime, in days, of the student session cookie *in the browser*, i.e.
+    # how long the browser is told to store it. The signed token itself does
+    # not expire: the student stays signed in until they log out. Browsers may
+    # cap the stored lifetime by their own policy (Chrome and Firefox limit it
+    # to roughly 400 days), in which case the student simply signs in again --
+    # nothing breaks.
+    STUDENT_SESSION_COOKIE_DAYS: int = 3650
     # Default lifetime, in days, of a newly created invite code. The admin may
     # override it per code on the /admin/invites form.
     INVITE_TTL_DAYS: int = 14

@@ -9,7 +9,7 @@ on every request (see :func:`resolve_student_session` and
 if a stale cookie is still presented.
 """
 
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -52,20 +52,25 @@ def login_with_password(db: Session, email: str, password: str) -> Student | Non
 def resolve_student_session(db: Session, token: str) -> Student | None:
     """Return the student identified by a valid session token, or ``None``.
 
-    Verifies the signature and age (``STUDENT_SESSION_TTL_DAYS``), then loads
-    the student from the database so that existence and the current
-    ``is_banned`` value are always fresh -- the signature alone is never
-    trusted. A banned student is still returned here (with ``is_banned`` set);
-    enforcing the ban is the job of ``require_not_banned`` so the caller can
-    render a 403 page instead of a login redirect.
+    The token's age is deliberately *not* checked: a student session lasts
+    until the student logs out, so a signed value issued years ago is still
+    accepted. ``loads`` is called without an age limit on purpose (the
+    ``STUDENT_SESSION_COOKIE_DAYS`` setting only limits how long the browser
+    stores the cookie, not how long the token is valid). This is a conscious
+    trade-off, not an oversight. The signature is still verified; existence and
+    the current ``is_banned`` flag are re-read from the database on every
+    request, so a ban takes effect immediately. There is no server-side
+    revocation: the only ways to cut a session short are banning the student or
+    changing ``SECRET_KEY`` (which logs every student out at once). A banned
+    student is still returned here (with ``is_banned`` set); enforcing the ban
+    is the job of ``require_not_banned`` so the caller can render a 403 page
+    instead of a login redirect.
     """
     if not token:
         return None
     try:
-        data = _serializer().loads(
-            token, max_age=settings.STUDENT_SESSION_TTL_DAYS * 86400
-        )
-    except (BadSignature, SignatureExpired):
+        data = _serializer().loads(token)
+    except BadSignature:
         return None
 
     student_id = data.get("student_id") if isinstance(data, dict) else None
