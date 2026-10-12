@@ -1,0 +1,51 @@
+{
+  "note": "Демонстрационные данные. Имена выдуманы, к реальной школе отношения не имеют. Настоящие ФИО и критерии лежат в data/teachers.local.json, которого нет в репозитории (см. .gitignore и docs/PLAN.md, «Данные учителей и критериев»).",
+  "criteria": [
+    {
+      "code": "explains",
+      "label": "Понятно объясняет материал",
+      "scale_min": 1,
+      "scale_max": 5,
+      "position": 10
+    },
+    {
+      "code": "fair",
+      "label": "Справедливо оценивает",
+      "scale_min": 1,
+      "scale_max": 5,
+      "position": 20
+    },
+    {
+      "code": "respect",
+      "label": "Уважительно относится к ученикам",
+      "scale_min": 1,
+      "scale_max": 5,
+      "position": 30
+    },
+    {
+      "code": "interesting",
+      "label": "Интересно ведёт урок",
+      "scale_min": 1,
+      "scale_max": 5,
+      "position": 40
+    }
+  ],
+  "teachers": [
+    {
+      "display_name": "Мария Образцова (демо)",
+      "subject": "Русский язык и литература"
+    },
+    {
+      "display_name": "Пётр Демидов (демо)",
+      "subject": "Математика"
+    },
+    {
+      "display_name": "Алина Круглова (демо)",
+      "subject": "Физика"
+    },
+    {
+      "display_name": "Сергей Ветров (демо)",
+      "subject": "История"
+    }
+  ]
+}

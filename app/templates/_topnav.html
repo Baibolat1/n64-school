@@ -10,9 +10,7 @@
         <span class="topnav-alias">{{ student.alias }}</span>
         <span class="topnav-links">
             <a href="/feed"{% if path == '/feed' or path.startswith('/feed/') %} class="is-active"{% endif %}>Лента</a>
-            {# Teacher reviews are still etap 9: no page to link to yet. The item
-               is shown dimmed so the section is already visible in the layout. #}
-            <span class="is-disabled">Учителя</span>
+            <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>Учителя</a>
             <a href="/me"{% if path == '/me' %} class="is-active"{% endif %}>Профиль</a>
             <a href="/scan"{% if path == '/scan' %} class="is-active"{% endif %}>QR-сканер</a>
         </span>

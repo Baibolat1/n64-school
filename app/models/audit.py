@@ -20,6 +20,7 @@ PII_FLAG_STATUSES = ("open", "resolved", "dismissed")
 # key in the table named here.
 TARGET_POST = "post"
 TARGET_COMMENT = "comment"
+TARGET_REVIEW = "review"
 TARGET_STUDENT = "student"
 
 

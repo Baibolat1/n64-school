@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Учителя{% endblock %}
+{% block content %}
+<h1>Учителя</h1>
+
+{# The list itself is data: who is on it comes from the teacher records seeded
+   from a data file (see scripts/seed_teachers.py), and every figure here is
+   computed over visible reviews only (app/repositories/reviews.py). #}
+{% if teachers %}
+<section class="teacher-list">
+    {% for teacher in teachers %}
+    {% set stats = stats_by_teacher.get(teacher.id) %}
+    <a class="teacher-card" href="/teachers/{{ teacher.id }}">
+        {{ ui.avatar(teacher.display_name, 'lg') }}
+        <span class="teacher-card-main">
+            <span class="teacher-name">{{ teacher.display_name }}</span>
+            {% if teacher.subject %}
+            <span class="muted">{{ teacher.subject }}</span>
+            {% endif %}
+        </span>
+        <span class="teacher-card-score">
+            <span class="score-badge">{{ ui.score(stats.average if stats else none) }}</span>
+            <span class="muted">Отзывов: {{ stats.review_count if stats else 0 }}</span>
+        </span>
+    </a>
+    {% endfor %}
+</section>
+{% else %}
+<p class="muted">Список учителей пока не заполнен.</p>
+{% endif %}
+{% endblock %}

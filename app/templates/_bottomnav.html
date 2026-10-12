@@ -10,10 +10,10 @@
         {{ ui.icon('feed') }}
         <span>Лента</span>
     </a>
-    <span class="is-disabled">
+    <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>
         {{ ui.icon('users') }}
         <span>Учителя</span>
-    </span>
+    </a>
     <a href="/me"{% if path == '/me' %} class="is-active"{% endif %}>
         {{ ui.icon('user') }}
         <span>Профиль</span>

@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_POSTS_WINDOW_SECONDS: int = 3600
     RATE_LIMIT_COMMENTS: int = 60
     RATE_LIMIT_COMMENTS_WINDOW_SECONDS: int = 3600
+    # Reviews are a once-per-teacher affair rather than a stream, so the budget
+    # only has to absorb edits, not a conversation.
+    RATE_LIMIT_REVIEWS: int = 20
+    RATE_LIMIT_REVIEWS_WINDOW_SECONDS: int = 3600
 
     # Login attempts allowed per client IP before further attempts are refused
     # with 429 (see app.services.login_throttle). The admin form is strict: it
@@ -91,6 +95,16 @@ class Settings(BaseSettings):
     ADMIN_LOGIN_WINDOW_SECONDS: int = 900
     STUDENT_LOGIN_MAX_ATTEMPTS: int = 20
     STUDENT_LOGIN_WINDOW_SECONDS: int = 900
+
+    # --- Teacher reviews ------------------------------------------------------
+    # Where the seeding script (scripts/seed_teachers.py) reads the list of
+    # teachers and review criteria from when no --file is given. The default
+    # path is deliberately one that is *not* in the repository (see .gitignore):
+    # the real names and criteria are personal data of the school's staff and
+    # are supplied per installation. The script falls back to the committed demo
+    # file with invented names when this one does not exist, so nothing here is
+    # required for the site to run.
+    TEACHERS_DATA_FILE: str = "data/teachers.local.json"
 
     # --- CSRF -----------------------------------------------------------------
     # Name of the cookie that carries the signed CSRF token, and of the hidden

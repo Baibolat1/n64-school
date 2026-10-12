@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -31,13 +32,18 @@ class Review(Base):
     teacher_id: Mapped[int] = mapped_column(
         ForeignKey("teachers.id"), nullable=False
     )
+    # Snapshot of the author's alias at publication time, exactly as on posts and
+    # comments: a later alias change does not rewrite what was published.
+    display_alias: Mapped[str] = mapped_column(Text, nullable=False)
+    is_anonymous: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # The text as written, with any flagged personal-data fragment already
+    # replaced by the filter's placeholder -- there is no second copy of it
+    # anywhere (the original wording is not kept, see app.services.publication).
     comment: Mapped[str] = mapped_column(Text, nullable=False)
     # Reviews are post-moderated: they are visible right after creation.
     status: Mapped[str] = mapped_column(
         Text, nullable=False, default=CONTENT_STATUS_VISIBLE
     )
-    # Text after soft replacement of personal data, when the PII filter fires.
-    anonymized_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

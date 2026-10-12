@@ -52,15 +52,6 @@
     text-decoration: underline;
 }
 
-/* "Учителя" has no page yet (etap 9). The item is rendered in both bars so the
-   section is already visible in the layout, but it is inert and dimmed. */
-.topnav .is-disabled,
-.bottomnav .is-disabled {
-    color: var(--text-dim);
-    pointer-events: none;
-    cursor: default;
-}
-
 /* In the top bar the current section is the only one underlined, so plain
    hover can keep its underline without the two states blurring together. */
 .topnav .is-active {

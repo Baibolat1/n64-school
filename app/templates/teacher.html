@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ teacher.display_name }} — отзывы{% endblock %}
+{% block content %}
+<p class="back-link"><a href="/teachers">← Все учителя</a></p>
+
+{# Name and subject are data (the teacher record); nothing about a particular
+   person is written into this template. #}
+<header class="page-header">
+    {{ ui.avatar(teacher.display_name, 'lg') }}
+    <div>
+        <h1>{{ teacher.display_name }}</h1>
+        {% if teacher.subject %}<p class="muted">{{ teacher.subject }}</p>{% endif %}
+    </div>
+</header>
+
+<section class="card">
+    <h2>Средние оценки</h2>
+    {% if overall.review_count %}
+    <p class="teacher-overall">
+        <span class="score-badge">{{ ui.score(overall.average) }}</span>
+        <span class="muted">по {{ overall.review_count }} отзывам</span>
+    </p>
+    {% if criterion_stats %}
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Критерий</th>
+                    <th>Средняя</th>
+                    <th>Оценок</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in criterion_stats %}
+                <tr>
+                    <td>{{ stat.criterion.label }}</td>
+                    <td>{{ ui.score(stat.average) }}</td>
+                    <td>{{ stat.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="muted">Отзывов пока нет — оценки появятся, как только их поставят.</p>
+    {% endif %}
+</section>
+
+<section>
+    <h2>Отзывы ({{ total_reviews }})</h2>
+    {% if reviews %}
+        {% for review in reviews %}
+        {% set scores = scores_by_review.get(review.id, {}) %}
+        {% include "_review_card.html" %}
+        {% endfor %}
+    {% else %}
+    <p class="muted">Отзывов пока нет. Будьте первым!</p>
+    {% endif %}
+</section>
+
+{% if total_pages > 1 %}
+<nav class="pagination" aria-label="Постраничная навигация">
+    {% if page > 1 %}
+    <a href="/teachers/{{ teacher.id }}?page={{ page - 1 }}">Позже</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+    <span class="muted">Страница {{ page }} из {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/teachers/{{ teacher.id }}?page={{ page + 1 }}">Раньше</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+</nav>
+{% endif %}
+
+{# The form is generated from the criteria table: each criterion becomes one
+   score field named after its code, on its own scale. Nothing about the set of
+   questions lives here. #}
+{% if criteria %}
+<section class="card">
+    <h2>{% if own_review %}Ваш отзыв{% else %}Оставить отзыв{% endif %}</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    {% if own_review and not own_review_visible %}
+    <p class="warning" role="status">Этот отзыв скрыт модератором: правки
+        сохранятся, но на странице он не появится.</p>
+    {% endif %}
+
+    <form method="post" action="/teachers/{{ teacher.id }}/reviews"
+          class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {% for criterion in criteria %}
+        <fieldset class="rating-field">
+            <legend>
+                {{ criterion.label }}
+                <span class="muted">от {{ criterion.scale_min }} до {{ criterion.scale_max }}</span>
+            </legend>
+            {{ ui.rating(score_field_prefix ~ criterion.code, criterion.scale_min,
+                         criterion.scale_max, form_scores.get(criterion.id)) }}
+        </fieldset>
+        {% endfor %}
+
+        <label for="comment">Текст</label>
+        <textarea id="comment" name="comment" rows="4"
+                  maxlength="{{ max_review_length }}"
+                  required>{{ form_comment or '' }}</textarea>
+
+        <label class="checkbox">
+            <input type="checkbox" name="is_anonymous" value="true"
+                   {% if form_is_anonymous %}checked{% endif %}>
+            Опубликовать анонимно
+        </label>
+        <p class="hint">При анонимной публикации вместо псевдонима будет показано
+            «Аноним».</p>
+
+        <button type="submit">
+            {% if own_review %}Обновить отзыв{% else %}Отправить отзыв{% endif %}
+        </button>
+    </form>
+</section>
+{% else %}
+<p class="muted">Критерии оценки ещё не заданы — оставить отзыв нельзя.</p>
+{% endif %}
+{% endblock %}

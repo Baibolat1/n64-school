@@ -25,3 +25,24 @@
 {% macro avatar(pseudonym, size="") %}
 <span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>
 {%- endmacro %}
+
+{# Average score, formatted in one place so every page shows the same thing: one
+   decimal, and a dash when there is nothing to average yet. #}
+{% macro score(value) %}{{ '%.1f'|format(value) if value is not none else '—' }}{%- endmacro %}
+
+{# Score picker: one radio per point of the criterion's own scale, drawn from
+   scale_min/scale_max rather than from a hard-coded 1..5, so a criterion can
+   use any scale the data asks for. `value` is the currently chosen point (a
+   string, as it comes back from a form) or None. The first radio carries
+   `required`, which makes the browser insist on an answer for the group without
+   the server having to reject the round trip. #}
+{% macro rating(name, scale_min, scale_max, value=None) %}
+<span class="rating">
+{%- for point in range(scale_min, scale_max + 1) %}
+    <label class="rating-option">
+        <input type="radio" name="{{ name }}" value="{{ point }}"{% if loop.first %} required{% endif %}{% if value is not none and value|string == point|string %} checked{% endif %}>
+        <span>{{ point }}</span>
+    </label>
+{%- endfor %}
+</span>
+{%- endmacro %}

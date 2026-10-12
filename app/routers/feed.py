@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_csrf, require_not_banned
+from app.core.pagination import page_window, parse_page
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.content import CONTENT_STATUS_VISIBLE, Post
@@ -28,19 +29,6 @@ router = APIRouter(tags=["feed"], dependencies=[Depends(require_csrf)])
 
 # Posts per page; a fixed size keeps the pagination links simple.
 PAGE_SIZE = 20
-
-
-def _parse_page(raw: str | None) -> int:
-    """Coerce the ``page`` query parameter to a positive int (junk -> page 1).
-
-    Negative, zero, empty and non-numeric values all mean "first page" instead
-    of raising a validation error.
-    """
-    try:
-        value = int(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return 1
-    return value if value >= 1 else 1
 
 
 def _body_error_message(
@@ -100,8 +88,7 @@ def _render_feed(
     status_code: int = status.HTTP_200_OK,
 ) -> Response:
     total = posts_repo.count_visible_posts(db)
-    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
-    page = min(page, total_pages)
+    page, total_pages = page_window(page, total, PAGE_SIZE)
     posts = posts_repo.list_visible_posts(
         db, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
     )
@@ -157,7 +144,7 @@ def feed(
     student: Student = Depends(require_not_banned),
     db: Session = Depends(get_db),
 ) -> Response:
-    return _render_feed(request, db, student, page=_parse_page(page))
+    return _render_feed(request, db, student, page=parse_page(page))
 
 
 @router.post("/feed/posts", response_class=HTMLResponse)
