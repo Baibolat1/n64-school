@@ -22,7 +22,7 @@ cp .env.example .env
 .venv/bin/alembic upgrade head
 
 # 4. первый админ
-ADMIN_USERNAME=director ADMIN_PASSWORD='длинный-пароль-от-12-символов' \
+ADMIN_USERNAME=baibo@icloud ADMIN_PASSWORD='длинный-пароль-от-12-символов' \
   .venv/bin/python scripts/seed_admin.py
 
 # 5. запуск

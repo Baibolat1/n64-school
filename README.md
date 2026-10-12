@@ -66,7 +66,7 @@ cp .env.example .env
 
 ```bash
 .venv/bin/python scripts/seed_admin.py
-.venv/bin/python scripts/seed_admin.py --username director --password '...'
+.venv/bin/python scripts/seed_admin.py --username baibo@icloud --password '...'
 ```
 
 Вход — `/admin/login`. Панель `/admin` показывает счётчики (открытые жалобы, открытые флаги
