@@ -164,6 +164,11 @@
     --content-max: 44rem;
     --nav-h: 4.25rem;           /* 68px: the floating bar's own height */
     --dock-lens-h: 3.5rem;      /* 56px: the lens, 6px past the tab it stands on */
+    /* The round button to the assistant: 48px, the smallest circle a thumb
+       finds without aiming at it. The size is a token because two rules read the
+       same number -- the circle itself, and the room the page has to leave under
+       its content so the button never sits on the last row (see layout.css). */
+    --fab-h: 3rem;              /* 48px: the floating shortcut to the assistant */
     /* How much room the floating bottom bar needs at the foot of a page: the
        bar itself, the gap it floats by, the safe-area inset under it and a
        thumb's worth of air, so the last post of the feed is never left behind

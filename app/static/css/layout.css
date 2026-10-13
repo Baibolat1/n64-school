@@ -681,6 +681,61 @@ body::before {
     box-shadow: none;
 }
 
+/* Round button to the assistant ------------------------------------------- */
+
+/* Одна круглая кнопка над доком, справа: тот же адрес, что у вкладки
+   «Ассистент», и та же материя, что у капсулы, -- стекло на 16 % белого с тем
+   же размытием и волосяной рамкой. Это ярлык, а не второй раздел: он держит
+   ассистента под большим пальцем там, где страница длинная.
+
+   Края те же 12px, что у дока, поэтому кнопка стоит ровно над его правым
+   концом, а не где-то рядом. Низ -- на высоте доковой прокладки, то есть в
+   воздухе над капсулой; на той же высоте висит и сообщение (см. .toast-host в
+   components.css), но сообщение живёт четыре секунды, а кнопка -- всегда,
+   поэтому страница уступает ей место в своей нижней прокладке (см.
+   body.has-dock ниже): иначе над правым краем последней строки она и стояла
+   бы -- а последняя строка на странице поста это круглая кнопка отправки. */
+.fab {
+    position: fixed;
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--fab-h);
+    height: var(--fab-h);
+    color: #fff;
+    background: var(--glass-sheen), var(--dock-lens);
+    border: 1px solid var(--dock-line);
+    border-radius: 50%;
+    box-shadow: var(--dock-shadow), var(--glass-highlight);
+    backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--transition-control), background-color var(--transition-control);
+}
+
+.fab .icon {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.fab:hover {
+    background: var(--glass-sheen), var(--control-hover);
+}
+
+.fab:active {
+    transform: scale(.94);
+}
+
+/* No frost to hide behind -- the button becomes a surface, like the capsule. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .fab {
+        background: var(--surface-1);
+    }
+}
+
 /* Page transitions (put there by static/swipe.js) -------------------------- */
 
 /* A swipe is a gesture between two *pages*, and the browser has to fetch the
@@ -796,9 +851,14 @@ main.nav-in-prev {
    screens. ---------------------------------------------------------------- */
 
 /* A wide screen has no room for a floating capsule of tabs at the foot of a
-   72rem column: the header is already there, in a line, with the wordmark. */
+   72rem column: the header is already there, in a line, with the wordmark. The
+   round button to the assistant goes with the dock and not with the header:
+   both are the phone's answer to a navigation that has to fit a thumb, and on a
+   wide screen the column's own edge is where the page's content ends -- a
+   button floating there would sit on the text it is meant to serve. */
 @media (min-width: 768px) {
-    .bottomnav {
+    .bottomnav,
+    .fab {
         display: none;
     }
 }
@@ -828,9 +888,18 @@ main.nav-in-prev {
        pagination link, the composer's button), and a control whose bottom edge
        is flush with the top of the dock is a control that is half pressed
        already: hence the whole clearance, bar plus inset plus a thumb's worth
-       of air (--dock-clearance in theme.css). */
-    body {
-        padding-bottom: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+       of air (--dock-clearance in theme.css). The assistant's button floats in
+       that air, at the right edge of it, so it adds its own height and a gap on
+       top: at the foot of the page the last row is the comment composer, and the
+       round send button in the corner is exactly what the shortcut would cover.
+
+       Only where the frame is, hence the class: the login screen has neither
+       dock nor button and centres its own card, and 60px of air under it would
+       only push that card up. */
+    body.has-dock {
+        padding-bottom: calc(
+            var(--dock-clearance) + var(--fab-h) + var(--space-3) + env(safe-area-inset-bottom)
+        );
     }
 
     /* The scroll edge: content does not stop at the tab bar, it dissolves under
@@ -870,6 +939,7 @@ main.nav-in-prev {
     }
 
     .bottomnav > a:active,
+    .fab:active,
     .topnav-links a:active {
         transform: none;
     }

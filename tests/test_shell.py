@@ -67,6 +67,78 @@ def test_every_page_carries_the_dock_and_the_menu(student, page):
     assert "/me/dev-apply" in panel.group(1), page
 
 
+def test_the_assistant_button_hangs_over_the_dock_everywhere_but_its_own_page(student):
+    """One round shortcut to the assistant, and it is not on the assistant."""
+    for page in ("/feed", "/me", "/esports", "/schedule"):
+        html = student.client.get(page).text
+        button = re.search(r'<a class="fab" href="([^"]+)"[^>]*>', html)
+        assert button, page
+        assert button.group(1) == "/assistant", page
+        # A link, not a button a script would have to wire up -- and named for
+        # a screen reader, since the icon inside is decoration.
+        assert 'aria-label="Ассистент"' in button.group(0), page
+        # The page knows to leave it room at the foot (see the class in the CSS
+        # test below): the button is fixed, so the padding is the only thing
+        # between it and the last row of the page.
+        assert re.search(r'<body class="[^"]*\bhas-dock\b', html), page
+
+    # On its own page there is nothing left to open: the button is gone. The
+    # frame is still there, so the class that reserves the room stays too.
+    assistant = student.client.get("/assistant").text
+    assert 'class="fab"' not in assistant
+    assert re.search(r'<body class="[^"]*\bhas-dock\b', assistant)
+
+
+def test_a_page_without_the_frame_reserves_no_room_for_the_button(client):
+    """The login screen has neither dock nor button; its card is centred."""
+    html = client.get("/login").text
+    assert 'class="fab"' not in html
+    assert not re.search(r'<body class="[^"]*\bhas-dock\b', html)
+
+
+def test_the_page_leaves_the_button_its_own_height_plus_a_gap():
+    """A fixed button over a page that did not know about it covers the last
+    row -- on the post page, that row is the composer's round send button."""
+    layout = _css("layout.css")
+
+    room = re.search(r"\n    body\.has-dock \{(.*?)\}", layout, re.S).group(1)
+    assert "var(--dock-clearance)" in room
+    assert "var(--fab-h)" in room  # the button's own height, from theme.css
+    assert "var(--space-3)" in room  # and a gap above it
+    assert "env(safe-area-inset-bottom)" in room
+
+
+def test_the_assistant_button_hides_with_the_dock_on_a_wide_screen():
+    """It is part of the phone's navigation, so it goes where the dock goes."""
+    layout = _css("layout.css")
+    wide = re.search(r"@media \(min-width: 768px\) \{(.*?)\n\}", layout, re.S)
+
+    fab = re.search(r"\n\.fab \{(.*?)\}", layout, re.S).group(1)
+    assert "position: fixed" in fab
+    assert "border-radius: 50%" in fab
+    # 48px: a circle a thumb finds without aiming, and wide enough for the tap
+    # target the rest of the site keeps.
+    assert "width: var(--fab-h)" in fab and "height: var(--fab-h)" in fab
+    assert re.search(r"--fab-h: 3rem;", _css("theme.css"))
+    assert "var(--dock-clearance)" in fab
+    assert "var(--dock-lens)" in fab and "var(--dock-line)" in fab
+    assert "backdrop-filter: blur(var(--dock-blur)) saturate(180%)" in fab
+    assert "-webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%)" in fab
+
+    # Hidden on a wide screen, and by the very rule that hides the dock: the
+    # two belong to each other, so one cannot leave without the other.
+    assert re.search(r"\.bottomnav,\s*\.fab \{\s*display: none;\s*\}", wide.group(1))
+    # Without the blur it is still a button: the same opaque fallback the dock
+    # uses, so it cannot turn into a see-through ghost on an old browser.
+    fallbacks = [
+        block.group(1)
+        for block in re.finditer(
+            r"@supports not \(\(backdrop-filter.*?\{(.*?)\}\s*\}", layout, re.S
+        )
+    ]
+    assert any(".fab" in body and "var(--surface-1)" in body for body in fallbacks)
+
+
 def test_the_menu_needs_no_script_to_open(student):
     """The panel is a <details>, not a button that a script has to wire up."""
     script = student.client.get("/static/app.js").text
@@ -389,7 +461,7 @@ def test_the_pill_lifts_inside_the_bar_and_comes_home_on_the_spring():
 
 
 def test_the_dock_clears_the_content_by_the_same_token():
-    """Page, fade and capsule agree on one number, so none can drift."""
+    """Page, fade, capsule and the assistant button agree on one number."""
     theme = _css("theme.css")
     layout = _css("layout.css")
 
@@ -398,7 +470,9 @@ def test_the_dock_clears_the_content_by_the_same_token():
     # 68px of bar plus 36px of air: the 12px the capsule floats by, and the
     # 24px that keeps the last control of a page out from under it.
     assert "2.25rem" in clearance
-    assert layout.count("var(--dock-clearance)") == 2  # the padding and the fade
+    # The padding, the fade, and the round assistant button -- which floats in
+    # exactly the air the padding leaves, so it hangs over nothing.
+    assert layout.count("var(--dock-clearance)") == 3
 
 
 def test_the_controls_share_one_pill():
