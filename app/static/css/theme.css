@@ -169,6 +169,12 @@
        same number -- the circle itself, and the room the page has to leave under
        its content so the button never sits on the last row (see layout.css). */
     --fab-h: 3rem;              /* 48px: the floating shortcut to the assistant */
+    /* The smallest thing a thumb finds without aiming: a row of a list, a
+       control in the header. 44px is iOS' own number, and it is a token for the
+       same reason -- the settings list, the header's one button and the round
+       send of a composer all have to be the same size, or the screen reads as
+       three different screens. */
+    --row-h: 2.75rem;           /* 44px: the least a finger is owed */
     /* How much room the floating bottom bar needs at the foot of a page: the
        bar itself, the gap it floats by, the safe-area inset under it and a
        thumb's worth of air, so the last post of the feed is never left behind
@@ -327,4 +333,38 @@ ol {
 ::selection {
     background: var(--accent-soft);
     color: #fff;
+}
+
+/* The phone's own type scale ------------------------------------------------ */
+
+/* A phone is not a narrow laptop, and its typography is the clearest place the
+   difference shows: iOS calls 17px *body text*, and a page that keeps a
+   desktop's 16px at arm's length reads as a web page shrunk to fit rather than
+   as an app. The steps are re-stated rather than re-derived from the clamps
+   above because a phone has no room for fluid growth to do anything: at 360px
+   and at 430px the body is the same 17px, the title the same 34px that iOS
+   Large Title is, and the caption the same 13px.
+
+   This lives on `:root` and not on `body` because everything asks the scale for
+   its size -- a heading, a field, a chip, a button -- and a body that grew
+   alone would leave the smaller type behind it at its old size. */
+@media (max-width: 767px) {
+    :root {
+        --step--1: 0.8125rem;   /* 13px: the caption of a card, the dock's label */
+        --step-0: 1.0625rem;    /* 17px: body text, and the size of a field */
+        --step-1: 1.25rem;      /* 20px: a section heading */
+        --step-2: 1.5rem;       /* 24px: an identity's name */
+        --step-3: 1.6875rem;    /* 27px */
+        --step-4: 2.125rem;     /* 34px: the one big title of a screen */
+    }
+}
+
+/* 360px is the narrowest phone worth designing for (an iPhone SE), and it is
+   where a title and a chip beside it stop fitting on one line. The title gives
+   two pixels of its size -- 30px is still a large title -- and the page column
+   gives back the gutter, instead of the pair breaking into two rows. */
+@media (max-width: 380px) {
+    :root {
+        --step-4: 1.875rem;     /* 30px */
+    }
 }

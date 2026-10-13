@@ -34,78 +34,101 @@
    возвращается на страницу заявки, отказ по настройкам — на /me/settings, и
    каждая форма сама показывает своё сообщение (см. app.routers.auth). #}
 
-{# Команда разработки. Карточка стоит сразу под профилем: это приглашение, а
-   не настройка, и место ей — там, где ученик только что прочитал, кто он на
-   сайте. Заявка одна на ученика: повторная отправка обновляет прежнюю, поэтому
-   состояние «уже отправлена» показывается вместо обещания, что она вторая. #}
-<section class="glass team-card">
-    <h2>{{ ui.icon('code') }} Разработка n64hub</h2>
-    <p>Хочешь развивать школьную платформу вместе с нами?</p>
-    {% if application %}
-    <p class="hint">Ваша заявка: {{ role_labels.get(application.role, application.role) }},
-        {{ application.contact }}. Мы напишем в Telegram — отправка ещё раз обновит её.</p>
-    {% endif %}
+{# Профиль — список, а не стопка карточек: на телефоне это тот же экран, что
+   «Настройки» в iOS, и он собран из того, что там есть, — подписи над группой и
+   строк одинаковой высоты с шевроном на конце. Одна строка — одно место или
+   одно действие: то, что раньше было заголовком карточки с кнопкой под ним,
+   теперь сама кнопка, а пояснение ушло под группу сноской (.list-note). #}
+
+{# Разделы. Строки с акцентной иконкой: это двери в другие экраны, а не
+   настройки, — тот же набор, что в доке и в шапке, и в том же порядке. #}
+<p class="list-head">Разделы</p>
+<nav class="glass list">
+    {% for href, icon_name, label in [
+        ('/feed', 'feed', 'Лента'),
+        ('/schedule', 'calendar', 'Расписание'),
+        ('/assistant', 'sparkles', 'Ассистент'),
+        ('/esports', 'gamepad', 'Турниры'),
+        ('/teachers', 'users', 'Учителя'),
+        ('/scan', 'qr', 'QR-сканер'),
+    ] %}
+    <a class="list-row list-row--link" href="{{ href }}">
+        {{ ui.icon(icon_name) }}
+        <span class="list-row-text">{{ label }}</span>
+        {{ ui.icon('chevron', cls='icon--chevron') }}
+    </a>
+    {% endfor %}
+</nav>
+
+{% if badges %}
+{# Награды: строка — медаль, турнир и игра под названием. Шеврона нет: строка
+   никуда не ведёт, она только говорит, что ученик получил. Игра стоит второй
+   строкой, а не значением справа: «Counter-Strike 2» на 360px не оставил бы
+   названию турнира места на одной строке с ним. #}
+<p class="list-head">Награды</p>
+<ul class="glass list">
+    {% for badge in badges %}
+    {% set tournament = badge_tournaments.get(badge.tournament_id) %}
+    <li class="list-row">
+        {{ ui.medal(badge.code, badge_label(badge.code)) }}
+        <span class="list-row-text">{{ tournament.title if tournament else 'Турнир' }}
+            {%- if tournament %}<span class="list-row-sub">{{ game_label(tournament.game) }}</span>{% endif %}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{# Команда разработки. Группа стоит там, где ученик только что прочитал, кто он
+   на сайте: это приглашение, а не настройка. Заявка одна на ученика: повторная
+   отправка обновляет прежнюю, поэтому состояние «уже отправлена» показывается
+   вместо обещания, что она вторая. #}
+<p class="list-head">Разработка n64hub</p>
+<div class="glass list">
     {# Ссылка и открыватель окна в одном элементе: со скриптом открывается
        <dialog>, без него — настоящая страница /me/dev-apply (см. app/static/app.js). #}
-    <a class="btn" href="/me/dev-apply" data-dialog-open="dev-apply">
-        {{ ui.icon('upload') }} Подать заявку в команду
+    <a class="list-row list-row--link" href="/me/dev-apply" data-dialog-open="dev-apply">
+        {{ ui.icon('code') }}
+        <span class="list-row-text">Подать заявку в команду</span>
+        {{ ui.icon('chevron', cls='icon--chevron') }}
     </a>
-</section>
+</div>
+<p class="list-note hint">Хочешь развивать школьную платформу вместе с нами?
+    {%- if application %} Ваша заявка: {{ role_labels.get(application.role, application.role) }},
+    {{ application.contact }}. Мы напишем в Telegram — отправка ещё раз обновит её.{% endif %}</p>
 
 {# Настройки: псевдоним и аватарка. Здесь только вход — сами формы лежат в
    окне ниже, и ту же пару отдаёт отдельная страница /me/settings, так что без
    скрипта ссылка ведёт на неё (см. app/static/app.js). #}
-<section class="glass settings-card">
-    <h2>{{ ui.icon('settings') }} Настройки</h2>
-    <p>Псевдоним и аватарка. Псевдоним виден всем в ленте, аватарка — рядом с
-        ним; фотография с телефона не загружается, картинку выбирают из галереи.</p>
-    {% if not can_change %}
-    <p class="hint">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
-        Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
-    {% endif %}
-    <a class="btn btn--ghost" href="/me/settings" data-dialog-open="settings">
-        {{ ui.icon('settings') }} Открыть настройки
+<p class="list-head">Настройки</p>
+<div class="glass list">
+    <a class="list-row" href="/me/settings" data-dialog-open="settings">
+        {{ ui.icon('settings') }}
+        <span class="list-row-text">Открыть настройки</span>
+        {{ ui.icon('chevron', cls='icon--chevron') }}
     </a>
-</section>
+</div>
+<p class="list-note hint">Псевдоним и аватарка. Псевдоним виден всем в ленте,
+    аватарка — рядом с ним; фотография с телефона не загружается, картинку
+    выбирают из галереи.
+    {%- if not can_change %} Псевдоним можно менять не чаще, чем раз в
+    {{ cooldown_days }} дней. Следующая попытка —
+    {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.{% endif %}</p>
 
-{% if badges %}
-<section class="glass">
-    <div class="hero-head">{{ ui.icon('trophy') }}<h2>Награды</h2></div>
-    <ul class="badge-list">
-        {% for badge in badges %}
-        {% set tournament = badge_tournaments.get(badge.tournament_id) %}
-        <li class="badge-card">
-            {{ ui.medal(badge.code, badge_label(badge.code)) }}
-            <span class="badge-card-text">
-                <span>{{ tournament.title if tournament else 'Турнир' }}</span>
-                <span class="muted">{{ game_label(tournament.game) if tournament else '' }}</span>
-            </span>
-        </li>
-        {% endfor %}
-    </ul>
-</section>
-{% endif %}
-
-<section class="glass">
-    <div class="hero-head">{{ ui.icon('feed') }}<h2>Разделы</h2></div>
-    <nav class="link-grid">
-        <a href="/schedule">{{ ui.icon('calendar') }} <span>Расписание</span></a>
-        <a href="/assistant">{{ ui.icon('sparkles') }} <span>Ассистент</span></a>
-        <a href="/esports">{{ ui.icon('gamepad') }} <span>Турниры</span></a>
-        <a href="/teachers">{{ ui.icon('users') }} <span>Учителя</span></a>
-        <a href="/scan">{{ ui.icon('qr') }} <span>QR-сканер</span></a>
-        <a href="/feed">{{ ui.icon('feed') }} <span>Лента</span></a>
-    </nav>
-</section>
-
-<section class="glass">
-    <div class="hero-head">{{ ui.icon('logout') }}<h2>Выход</h2></div>
-    <p class="hint">Вы остаётесь в системе на этом устройстве, пока не выйдете сами.</p>
+{# Аккаунт: одна строка, и та — выход. Выход живёт только здесь, чтобы ученик
+   не вылетел из аккаунта от промаха по меню; строка красная, потому что это
+   единственное действие на экране, которое нельзя отменить. #}
+<p class="list-head">Аккаунт</p>
+<div class="glass list">
     <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="link-button">{{ ui.icon('logout') }} Выйти</button>
+        <button type="submit" class="list-row list-row--danger">
+            {{ ui.icon('logout') }}
+            <span class="list-row-text">Выйти</span>
+        </button>
     </form>
-</section>
+</div>
+<p class="list-note hint">Вы остаётесь в системе на этом устройстве, пока не
+    выйдете сами.</p>
 
 {# Окно настроек. Нативный <dialog>: браузер сам рисует его поверх страницы,
    сам закрывает по Escape и сам убирает остальную страницу из обхода с

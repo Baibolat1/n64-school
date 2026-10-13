@@ -879,6 +879,35 @@ main.nav-in-prev {
         margin-left: auto;
     }
 
+    /* The header on a phone carries one control, and that control is a thumb's
+       size: 44px (--row-h) rather than the 40 it wears on a laptop, with the
+       mark beside it grown so the one row does not read as a big button next
+       to a small logo. */
+    .topnav-inner {
+        min-height: var(--row-h);
+        gap: var(--space-2);
+    }
+
+    .burger > summary {
+        width: var(--row-h);
+        height: var(--row-h);
+    }
+
+    .topnav-mark {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 1.15rem;
+    }
+
+    /* A phone's page starts closer to the bar than a laptop's: 16px of air under
+       a sticky header is what iOS leaves, while the 32px the wide layout uses
+       reads as a gap belonging to nothing. The foot keeps a token's worth too --
+       the room the dock needs is carried by body.has-dock below, and a page
+       cannot be paid for twice. */
+    .container {
+        padding: var(--space-4) var(--space-4) var(--space-6);
+    }
+
     .bottomnav {
         display: flex;
     }
@@ -917,6 +946,17 @@ main.nav-in-prev {
         height: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
         background: linear-gradient(to top, var(--bg) 26%, rgba(9, 9, 11, 0) 100%);
         pointer-events: none;
+    }
+}
+
+/* The narrowest phone worth designing for (an iPhone SE is 360px): the page
+   column gives back two pixels of gutter on each side. 336px of content instead
+   of 328 is what keeps a title and the chip beside it on one line -- the title
+   itself gives its two pixels in theme.css, and together the two are the whole
+   difference between a header that fits and one that breaks into two rows. */
+@media (max-width: 380px) {
+    .container {
+        padding-inline: var(--space-3);
     }
 }
 

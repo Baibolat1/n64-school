@@ -51,6 +51,22 @@
     margin-bottom: var(--space-4);
 }
 
+/* A panel on a phone is inset 16px rather than 24: at 360px those 8px on each
+   side are 8% of the screen, and a card has always been 16px from its own edge
+   on iOS. Only the frame of a panel moves -- what is drawn inside it (a lesson
+   of the day, a field, a row) keeps the spacing it was given, so the hierarchy
+   inside the card is untouched. */
+@media (max-width: 767px) {
+    .glass,
+    .card,
+    .post-card,
+    .teacher-card,
+    .stat-card,
+    .login-card {
+        padding: var(--space-4);
+    }
+}
+
 .hero-head .icon {
     color: var(--accent);
 }
@@ -66,8 +82,7 @@
 .hw-item,
 .week-day,
 .widget-lessons li,
-.roster-item,
-.badge-card {
+.roster-item {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
@@ -358,11 +373,13 @@ button:disabled {
     width: 100%;
 }
 
-/* A round icon control: the profile's camera, the close of a sheet. Square by
-   construction, so one width and no padding maths. */
+/* A round icon control: the close of a sheet, the send of a composer. Square by
+   construction, so one width and no padding maths -- and a thumb's size
+   (--row-h), because every one of them is a control a finger has to find: a
+   40px circle sitting in the corner of a form is the one that gets missed. */
 .btn--icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: var(--row-h);
+    height: var(--row-h);
     padding: 0;
     border-radius: 50%;
 }
@@ -743,20 +760,31 @@ body:not(.login-page) main > * + * {
     font-size: var(--step--1);
 }
 
-/* The assistant still puts its one button under the field in a row of its own;
-   it gets the chat layout -- the input pinned above the dock -- in pass 3, and
-   this row goes with it. */
-.composer-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    margin-top: var(--space-1);
+/* The assistant's composer is the feed's, without the picture: the same one-row
+   form (`composer__form`, a field that grows as it is typed into and a round
+   send button), and the same classes, so the two are one control in two places.
+   Who is asking is said by the bubbles above -- the student's own face beside
+   their question would add nothing the conversation has not already said. */
+.chat-composer {
+    margin-top: var(--space-4);
 }
 
-.composer-foot button {
-    margin-top: 0;
+/* On a phone the field is pinned: the conversation scrolls and the input stays
+   where the thumb already is, one dock's clearance above the capsule -- a chat
+   whose input has to be hunted for at the foot of a long answer is a chat that
+   is read once. It is its own sheet of glass (`.glass`) and not part of the
+   conversation's panel, because a pinned element has to be opaque enough to
+   scroll the answers *under*: otherwise the last line of the answer reads
+   through the field.
+
+   Only on a phone: on a wide screen the whole page is one column in view, and
+   nothing there needs pinning. */
+@media (max-width: 767px) {
+    .chat-composer {
+        position: sticky;
+        bottom: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+        z-index: 2;
+    }
 }
 
 /* A checkbox that reads as a chip rather than as a labelled box: the pill is the
@@ -1789,57 +1817,11 @@ a.stat-card:hover {
 
 /* Badges on the profile ---------------------------------------------------- */
 
-.badge-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-.badge-card {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    background: rgba(255, 255, 255, .04);
-    border: 1px solid var(--glass-line);
-    border-radius: var(--radius-m);
-}
-
-.badge-card-text {
-    display: flex;
-    flex-direction: column;
-    font-size: var(--step--1);
-}
-
-/* Section links on the profile: a grid of glass tiles, the same control reachable
-   from the bottom bar of a phone and from the top bar of a laptop. */
-.link-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-    gap: var(--space-2);
-}
-
-.link-grid a {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    font-size: var(--step--1);
-    font-weight: 500;
-    background: rgba(255, 255, 255, .05);
-    border: 1px solid var(--glass-line);
-    border-radius: var(--radius-m);
-    transition: background var(--transition-fast), transform var(--transition-fast);
-}
-
-.link-grid a:hover {
-    background: rgba(255, 255, 255, .11);
-    transform: translateY(-2px);
-}
-
-.link-grid .icon {
-    color: var(--accent);
-}
+/* The medal is not an icon and not a picture of one: it is the chip the award
+   itself wears everywhere else (see .medal), so a badge row is a list row whose
+   leading element happens to be a piece of colour. Nothing to style here -- the
+   row's height comes from --row-h, and the title and the game split between the
+   label and the value at the far end. */
 
 /* Assistant ---------------------------------------------------------------- */
 
@@ -2037,6 +2019,172 @@ dialog.sheet[open] {
     margin-top: var(--space-3);
 }
 
+/* Rows: the list an iOS settings screen is made of ------------------------- */
+
+/* A profile is not a stack of cards with a button in each: it is one list of
+   things, grouped. A group is a single sheet of glass (`.glass` does the corner,
+   the frost and the rim) with hairlines drawn between its rows -- one line per
+   seam instead of a border on each row, which is what keeps a group of six rows
+   from reading as six boxes in a column.
+
+   Everything here is measured against one number: --row-h, 44px. A row is that
+   tall whether it leads somewhere or only says what a value is, so the list
+   reads as a grid of the same thing rather than as rows of two sizes. */
+.list {
+    /* The padding comes off so the rows reach the rounded edge and the hairlines
+       run the full width; the corner is what keeps that from looking cut. */
+    padding: 0;
+    overflow: hidden;
+}
+
+/* The caption over a group, the way iOS heads one: small, letter-spaced, and
+   quieter than anything in the list. It sits outside the panel -- inside, it
+   would be the first row -- and its side margin lines it up with the text of
+   the rows below, not with the panel's edge. */
+.list-head {
+    margin: var(--space-5) var(--space-3) var(--space-2);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+/* Above the first group there is no row to be separated from, only the header
+   the page already ended: the caption takes a token rather than the whole
+   --space-5, and the header's own margin does the rest. */
+.profile-hero + .list-head {
+    margin-top: var(--space-1);
+}
+
+/* A row is a link, a form's button or a plain <div>, so it is built like the
+   control it is: full width, its own type, no border. `text-align: left`
+   because two of the three are controls the browser centres by default. */
+.list-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--row-h);
+    padding: var(--space-3) var(--space-4);
+    font: inherit;
+    font-weight: 500;
+    color: var(--text);
+    background: none;
+    border: 0;
+    border-radius: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    animation: row-in var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+/* One hairline per seam, and none above the first row. */
+.list-row + .list-row {
+    border-top: 1px solid var(--glass-line);
+}
+
+.list-row:hover {
+    background: rgba(255, 255, 255, .05);
+}
+
+/* The press is the whole animation a list needs: the row lights up under the
+   finger and the chevron leans the way the row leads -- the row answering
+   before the page it opens has even been asked for. */
+.list-row:active {
+    background: rgba(255, 255, 255, .09);
+}
+
+.list-row .icon {
+    flex: none;
+    color: var(--text-dim);
+}
+
+/* A row that opens a section is a door, and the accent is how this site has
+   always said so -- the tiles these rows replace tinted the same icons. The
+   utility rows (the settings, the way out) stay monochrome: they are not places,
+   they are what you do here. */
+.list-row--link .icon {
+    color: var(--accent);
+}
+
+.list-row-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* What a row is worth, set down at its right end: a count of days, a role, the
+   word a setting currently has. Quieter than the label it answers to, and never
+   the thing that grows -- the label is. */
+.list-row-value {
+    flex: none;
+    color: var(--text-dim);
+    font-size: var(--step--1);
+    font-weight: 400;
+}
+
+/* A second line *under* the label rather than a value at its far end: the game a
+   tournament was played in, the class a student is in. It is what iOS does with
+   a title and a subtitle, and it is the difference between a row that survives a
+   360px screen and one whose two ends meet in the middle: a value that does not
+   shrink pushes the label into wrapping, while a subtitle simply makes the row
+   two lines tall and leaves the width alone. */
+.list-row-sub {
+    display: block;
+    color: var(--text-dim);
+    font-size: var(--step--1);
+    font-weight: 400;
+}
+
+.list-row .icon--chevron {
+    /* 18px, and deliberately not the 1.2em an icon is everywhere else: the
+       chevron is punctuation at the end of a line, not a thing to look at. */
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--text-dim);
+    transition: transform var(--transition-control), color var(--transition-control);
+}
+
+.list-row:hover .icon--chevron,
+.list-row:active .icon--chevron {
+    color: var(--text);
+    transform: translateX(2px);
+}
+
+/* The one destructive row on the list: the way out. It keeps its place, its
+   height and its chevron, and says what it does in the red the rest of the site
+   refuses with. */
+.list-row--danger,
+.list-row--danger .icon,
+.list-row--danger .list-row-value {
+    color: var(--danger);
+}
+
+/* A note under a group -- what the rows above it cannot say in a label. It is
+   inset the way the caption is, so the column of a group reads as one column. */
+.list-note {
+    margin: var(--space-2) var(--space-3) 0;
+}
+
+/* The rows arrive the way the posts do: a short rise, one after the next, so a
+   screen that is mostly a list does not appear in one block. Six steps and then
+   the same delay for everything below -- past the sixth row the eye is reading
+   rather than counting, and a longer staircase would only be a thing to wait
+   for. */
+@keyframes row-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.list-row:nth-child(2) { animation-delay: 40ms; }
+.list-row:nth-child(3) { animation-delay: 80ms; }
+.list-row:nth-child(4) { animation-delay: 120ms; }
+.list-row:nth-child(5) { animation-delay: 160ms; }
+.list-row:nth-child(n + 6) { animation-delay: 200ms; }
+
 /* Profile ----------------------------------------------------------------- */
 
 /* The photo is the largest avatar on the site -- it is the one place where the
@@ -2064,63 +2212,6 @@ dialog.sheet[open] {
 .profile-hero-text .btn {
     align-self: flex-start;
     margin-top: var(--space-2);
-}
-
-/* The team card: a panel that is mostly an invitation, so the text and the
-   button are all it needs. */
-.team-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-}
-
-.team-card h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-}
-
-.team-card h2 .icon {
-    color: var(--accent);
-}
-
-.team-card p {
-    color: var(--text-dim);
-    font-size: var(--step--1);
-}
-
-.team-card .btn {
-    align-self: flex-start;
-    margin-top: 0;
-}
-
-/* The settings card: one row with a word and a way into the sheet. It is the
-   same shape as the team card and for the same reason -- both are a line of
-   text and a control, not a form. */
-.settings-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-}
-
-.settings-card h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-}
-
-.settings-card h2 .icon {
-    color: var(--text-dim);
-}
-
-.settings-card p {
-    color: var(--text-dim);
-    font-size: var(--step--1);
-}
-
-.settings-card .btn {
-    align-self: flex-start;
-    margin-top: 0;
 }
 
 /* One thing to change inside the sheet: a heading, a word about it, and the
@@ -2302,6 +2393,7 @@ dialog.sheet[open] {
 @media (prefers-reduced-motion: reduce) {
     body::before,
     .posts .post-card,
+    .list-row,
     .action--like.is-liked .icon,
     .answer-body,
     .status--live,
@@ -2327,10 +2419,11 @@ dialog.sheet[open] {
     .action:active,
     .pagination a:hover,
     .rating-option:hover span,
-    .link-grid a:hover,
     .teacher-card:hover,
     a.stat-card:hover,
     .timeline-item:hover,
+    .list-row:hover .icon--chevron,
+    .list-row:active .icon--chevron,
     .avatar-option:hover {
         transform: none;
     }

@@ -49,23 +49,11 @@
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <p class="error" role="alert" data-error-slot hidden></p>
 
-    <form method="post" action="/assistant" class="stacked-form"
-          data-async="assistant" data-api="/api/assistant">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label class="visually-hidden" for="question">Ваш вопрос</label>
-        <textarea id="question" name="question" rows="2"
-                  maxlength="{{ max_question_length }}"
-                  placeholder="Например: что задали по алгебре на завтра?"
-                  required>{{ question or '' }}</textarea>
-
-        <div class="composer-foot">
-            <button type="submit">{{ ui.icon('send') }} Спросить</button>
-        </div>
-    </form>
-
     {# Подсказки — кнопки, а не подписи: нажатие подставляет вопрос в поле и
        отправляет его той же формой, поэтому идёт тем же путём, что и набранный
-       руками. Без скрипта это просто текст (type="button" ничего не отправляет). #}
+       руками. Без скрипта это просто текст (type="button" ничего не отправляет).
+       Стоят они над полем, а не под ним: поле прижато к доку (см.
+       .chat-composer), и всё, что оказалось бы ниже, уезжало бы под него. #}
     <div class="suggest">
         {% for sample in [
             'Расписание на сегодня',
@@ -76,5 +64,27 @@
         <button type="button" class="chip chip--ghost" data-ask>{{ sample }}</button>
         {% endfor %}
     </div>
+</section>
+
+{# Поле вопроса — тот же композер, что в ленте: одна строка, которая растёт до
+   четырёх, и круглая кнопка отправки (см. .composer__form). Отдельной панелью,
+   а не внутри разговора: на телефоне он прижат к доку, и ему нужен свой
+   материал, чтобы ответы уходили под него. Без скрипта это обычная textarea с
+   кнопкой, и вопрос уходит той же формой. #}
+<section class="glass composer chat-composer">
+    <form method="post" action="/assistant" class="composer__form"
+          data-async="assistant" data-api="/api/assistant">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="visually-hidden" for="question">Ваш вопрос</label>
+        <textarea id="question" name="question" rows="1"
+                  maxlength="{{ max_question_length }}"
+                  placeholder="Например: что задали по алгебре на завтра?"
+                  data-autogrow
+                  required>{{ question or '' }}</textarea>
+        <button type="submit" class="btn--icon btn--send">
+            {{ ui.icon('send') }}
+            <span class="visually-hidden">Спросить</span>
+        </button>
+    </form>
 </section>
 {% endblock %}

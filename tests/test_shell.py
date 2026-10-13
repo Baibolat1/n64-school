@@ -488,3 +488,125 @@ def test_the_controls_share_one_pill():
     # Same padding, same size: the row of actions is a row of one control.
     assert "padding: var(--space-2) var(--space-3)" in action
     assert "font: inherit" in action
+
+
+# --- Pass 3: the phone reads as an app -----------------------------------------
+
+
+def _media(css: str, query: str) -> str:
+    """Everything inside the first ``@media (query)`` block.
+
+    Braces are counted rather than matched with a regex: every block worth
+    reading here has rules of its own inside it, and a lazy ``.*?}`` would stop
+    at the first rule's closing brace.
+    """
+    start = css.index("@media (" + query + ") {")
+    depth = 0
+    for index in range(css.index("{", start), len(css)):
+        if css[index] == "{":
+            depth += 1
+        elif css[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return css[start : index + 1]
+    raise AssertionError("unterminated media query")
+
+
+def test_the_phone_gets_a_type_scale_of_its_own():
+    """17px body and a 34px title: the phone is not a narrow laptop."""
+    theme = _css("theme.css")
+
+    phone = _media(theme, "max-width: 767px")
+    assert "--step-0: 1.0625rem;" in phone      # 17px: iOS body text
+    assert "--step-4: 2.125rem;" in phone       # 34px: iOS Large Title
+    assert "--step--1: 0.8125rem;" in phone     # 13px: a caption
+
+    # 360px is where a title and the chip beside it stop fitting, and the title
+    # is what gives way -- two pixels of it, and nothing else on the page.
+    narrow = _media(theme, "max-width: 380px")
+    assert "--step-4: 1.875rem;" in narrow
+    assert "--step-0" not in narrow
+
+
+def test_a_row_of_the_list_is_a_thumb_tall():
+    """44px, and the same number for the header's button and the round send."""
+    theme = _css("theme.css")
+    components = _css("components.css")
+
+    assert _rem_to_px(theme, "--row-h") == 44
+
+    row = re.search(r"\.list-row \{(.*?)\}", components, re.S).group(1)
+    assert "min-height: var(--row-h)" in row
+
+    icon_button = re.search(r"\.btn--icon \{(.*?)\}", components, re.S).group(1)
+    assert "var(--row-h)" in icon_button
+
+    # The chevron is punctuation at the end of a row, not an icon to look at.
+    chevron = re.search(r"\.list-row \.icon--chevron \{(.*?)\}", components, re.S).group(1)
+    assert "1.125rem" in chevron
+
+
+def test_the_profile_is_one_list_of_rows(student):
+    """Every door on the profile is a row of the same list, not a card of its own."""
+    html = student.client.get("/me").text
+    main = re.search(r'<main class="container">(.*)</main>', html, re.S).group(1)
+
+    # Six sections and the invitation: each one a row with its own chevron, and
+    # the settings row with a chevron too -- eight rows that lead somewhere.
+    assert len(re.findall(r'class="list-row list-row--link"', main)) == 7
+    assert main.count("icon--chevron") == 8
+
+    # The way out is a row as well, and the only red one: it is the one thing on
+    # the screen that cannot be undone.
+    assert 'class="list-row list-row--danger"' in main
+    assert main.count("list-row--danger") == 1
+
+    # The captions are over the groups, not headings inside them -- one per
+    # group, and the awards group only exists for a student who has a badge.
+    assert main.count('class="list-head"') == 4
+    assert "link-grid" not in main
+
+    # And the two sheets still open from their rows.
+    assert 'data-dialog-open="settings"' in main
+    assert 'data-dialog-open="dev-apply"' in main
+
+
+def test_the_assistant_input_is_the_feed_composer_and_it_is_pinned(student):
+    """One composer for the whole site, and on a phone it does not scroll away."""
+    html = student.client.get("/assistant").text
+
+    form = re.search(r'<form[^>]*data-async="assistant".*?</form>', html, re.S).group(0)
+    assert "composer__form" in form          # the feed's own row
+    assert "data-autogrow" in form           # one line that grows to four
+    assert 'class="btn--icon btn--send"' in form
+    assert 'class="visually-hidden">Спросить' in form
+
+    components = _css("components.css")
+    # The old row of its own is gone -- there is no second composer left to
+    # drift away from the first.
+    assert "composer-foot" not in html
+    assert ".composer-foot" not in components
+
+    # Pinned above the dock, by the token the dock itself is measured with.
+    pinned = [
+        block
+        for block in re.findall(r"\.chat-composer \{(.*?)\}", components, re.S)
+        if "position: sticky" in block
+    ]
+    assert len(pinned) == 1, "the composer is pinned once or not at all"
+    assert "var(--dock-clearance)" in pinned[0]
+
+
+def test_a_panel_on_a_phone_is_inset_like_a_card():
+    """16px of padding at phone widths, and the rows still reach their edge."""
+    components = _css("components.css")
+    phone = _media(components, "max-width: 767px")
+
+    assert "padding: var(--space-4);" in phone
+
+    # `.list` comes after that block and takes the padding off again: a row has
+    # to reach the rounded corner, or the group is a frame inside a frame.
+    list_rule = re.search(r"\.list \{(.*?)\}", components, re.S).group(1)
+    assert "padding: 0" in list_rule
+    assert components.index(".list {") > components.index(phone)
+
