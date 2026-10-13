@@ -483,9 +483,14 @@ body::before {
 /* Every tab carries the same transparent hairline as the selected one, so the
    border appearing on the selected tab moves nothing: a border that only
    exists in one state changes the box's inner width by two pixels and the
-   label jumps sideways the moment the tab is picked. */
-.bottomnav > a,
-.bottomnav > span {
+   label jumps sideways the moment the tab is picked.
+
+   Only `a`, never `span`: the lens the script inserts is a span and a direct
+   child too, and a rule that reached it would pull it out of `position:
+   absolute` and into the flex line -- where it takes a slot of its own, leaves
+   a gap at the leading edge and shifts every tab along. The tabs are links; a
+   bare span child does not exist in this bar. */
+.bottomnav > a {
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
@@ -550,7 +555,13 @@ body::before {
    measures the tab; the height is the token both the script and the bar agree
    on. `top` is measured from the padding box, which is where the flex tabs
    begin; for the same reason the script takes the border off the horizontal
-   distance it measures. */
+   distance it measures.
+
+   `position: absolute` is load-bearing and not only a placement: it is what
+   keeps the lens out of the flex line. The moment anything gives it a flow
+   position it becomes a sixth flex item -- with a slot at the leading edge that
+   it then leaves empty -- and the script's offsets, measured from the bar,
+   start from the wrong origin (see the note on `.bottomnav.is-js > a`). */
 .bottomnav__blob {
     position: absolute;
     top: 50%;
@@ -649,8 +660,15 @@ body::before {
     transition: none;
 }
 
-.bottomnav.is-js > a,
-.bottomnav.is-js > span {
+/* The tabs are lifted above the lens below them -- and the lens itself is
+   deliberately *not* in this list. `is-js > span` used to be here, and it was
+   the bug that made the bar look broken: the lens the script inserts is a span,
+   so this rule -- more specific than `.bottomnav__blob` -- turned it into a
+   flex item. It then held a slot of its own at the leading edge (the empty gap)
+   and, because a transform is measured from the element's own place and not
+   from the bar, landed one padding width to the right of the tab it stands for.
+   Nothing else in the bar is a span, so `a` is the whole list. */
+.bottomnav.is-js > a {
     position: relative;
     z-index: 1;
 }

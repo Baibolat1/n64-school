@@ -33,6 +33,13 @@ def _css(name: str) -> str:
     return (CSS_DIR / name).read_text(encoding="utf-8")
 
 
+def _rem_to_px(css: str, token: str) -> int:
+    """The px value of a token declared as a plain rem length (16px root)."""
+    value = re.search(re.escape(token) + r": ([\d.]+)rem;", css)
+    assert value, token
+    return round(float(value.group(1)) * 16)
+
+
 def _settings_dialog(html: str) -> str:
     """The settings sheet only, so a form outside it cannot pass as inside it."""
     match = re.search(r'<dialog[^>]*id="settings".*?</dialog>', html, re.S)
@@ -181,15 +188,61 @@ def test_a_tab_is_26px_of_icon_and_11px_of_label():
     assert "width: 1.625rem" in icon  # 26px
     assert "height: 1.625rem" in icon
 
-    tab = re.search(r"\.bottomnav > a,\n\.bottomnav > span \{(.*?)\}", layout, re.S).group(1)
+    tab = re.search(r"\.bottomnav > a \{(.*?)\}", layout, re.S).group(1)
     assert "font-size: 0.6875rem" in tab  # 11px
     assert "white-space: nowrap" in tab  # a wrapped label makes one tab taller
 
     # The four tabs you are not in sit back; the one you are in does not.
-    dimmed = re.search(r"\.bottomnav > a \{(.*?)\}", layout, re.S).group(1)
-    assert "opacity: .6" in dimmed
+    dimmed = [block for block in re.findall(r"\.bottomnav > a \{(.*?)\}", layout, re.S)]
+    assert any("opacity: .6" in block for block in dimmed)
     active = re.search(r"\.bottomnav \.is-active \{(.*?)\}", layout, re.S).group(1)
     assert "opacity: 1" in active
+
+
+def test_the_lens_stays_out_of_the_flex_line():
+    """No rule may hand the lens a place of its own in the row of tabs.
+
+    This is the bug the bar shipped with: `.bottomnav.is-js > span` is more
+    specific than `.bottomnav__blob`, and the lens *is* a span and a direct
+    child of the bar -- so the rule that lifts the tabs above the lens turned
+    the lens into a flex item. It then took a slot at the leading edge (the
+    empty gap on the left of the bar, with the five tabs sharing what was left)
+    and its transform, measured from its own slot instead of from the bar, put
+    it a padding width to the right of the tab it stands for.
+    """
+    layout = _css("layout.css")
+
+    # The lens is positioned against the bar and nothing else.
+    blob = re.search(r"\n\.bottomnav__blob \{(.*?)\}", layout, re.S).group(1)
+    assert "position: absolute" in blob
+    for declaration in ("top: 50%", "height: var(--dock-lens-h)"):
+        assert declaration in blob
+
+    # And no selector reaches it through `span`: the tabs are links, so a rule
+    # written for "the children of the bar" must say `a`. Comments go first --
+    # this very file explains the old selector, and the explanation is not a
+    # rule.
+    rules = re.sub(r"/\*.*?\*/", "", layout, flags=re.S)
+    for selector, _ in re.findall(r"([^{}]+)\{([^{}]*)\}", rules):
+        assert "> span" not in selector, (
+            "this rule would give the lens a slot of its own: %s" % selector.strip()
+        )
+    assert ".bottomnav.is-js > a {" in layout
+
+    # The bar is one row of five equal tabs and nothing else: no spacer, no
+    # hidden item, and the same padding on both sides.
+    dock = re.search(r"\.bottomnav \{(.*?)\}", layout, re.S).group(1)
+    assert "padding: var(--space-2);" in dock
+    assert "justify-content: space-between" in dock
+    assert "height: var(--nav-h)" in dock
+    # The lens has to fit *inside* the bar with room to spare: 56px in 68px
+    # leaves 6px above and below, and the bar's own 8px of padding leaves it
+    # 6px clear of either end of its travel.
+    theme = _css("theme.css")
+    bar_px = _rem_to_px(theme, "--nav-h")
+    lens_px = _rem_to_px(theme, "--dock-lens-h")
+    assert bar_px == 68 and lens_px == 56
+    assert lens_px <= bar_px - 8
 
 
 # --- The profile ---------------------------------------------------------------
@@ -306,7 +359,7 @@ def test_the_dock_is_a_capsule_of_its_own_material():
     # Every tab is already the capsule the selected one turns into: the
     # highlight only thickens the fill and lights the rim, so picking a tab
     # moves nothing. That is why the corner is on the tab and not on `.is-active`.
-    tab = re.search(r"\.bottomnav > a,\n\.bottomnav > span \{(.*?)\}", layout, re.S)
+    tab = re.search(r"\.bottomnav > a \{(.*?)\}", layout, re.S)
     assert "var(--radius-dock-tab)" in tab.group(1)
     assert "border: 1px solid transparent" in tab.group(1)
 
