@@ -342,6 +342,65 @@ main section > h2 {
     font-size: var(--step-1);
 }
 
+/* A gallery picture: fills the round frame above edge to edge. The size classes
+   (.avatar--sm / .avatar--lg) still set the box, so nothing is repeated here. */
+.avatar--img {
+    object-fit: cover;
+    border: 1px solid var(--line);
+}
+
+/* Text for screen readers only: the gallery options carry the picture as pure
+   decoration (the avatar is aria-hidden), so each radio needs a spoken name
+   that the sighted page hides. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* Gallery picker (on /me): a wrapping row of options, each a hidden radio plus
+   the avatar it selects. Pure CSS -- the chosen state hangs off
+   `input:checked + .avatar`, so no script is needed (the CSP forbids one). */
+.avatar-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.avatar-option {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* The native control stays in the page for keyboard and screen readers, but is
+   clipped out of sight; the avatar beside it is the visible part. */
+.avatar-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.avatar-option input:checked + .avatar {
+    outline: 2px solid var(--cream);
+    outline-offset: 2px;
+}
+
+/* The hidden input cannot show a focus ring of its own. */
+.avatar-option input:focus-visible + .avatar {
+    outline: 2px solid var(--cream);
+    outline-offset: 2px;
+}
+
 /* Line icon: inline SVG that inherits the text colour and sits on the line. - */
 
 .icon {

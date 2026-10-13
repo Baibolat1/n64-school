@@ -6,7 +6,7 @@
 
 <article class="post-card">
     <div class="post-meta">
-        {{ ui.avatar(post.display_alias, 'sm') }}
+        {{ ui.avatar(post.display_alias, 'sm', avatar_keys.get(post.author_id)) }}
         <span class="post-author">{{ post.display_alias }}</span>
         <time datetime="{{ post.created_at.isoformat() }}">
             {{ post.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
@@ -26,7 +26,7 @@
         {% for comment in comments %}
         <article class="comment">
             <div class="post-meta">
-                {{ ui.avatar(comment.display_alias, 'sm') }}
+                {{ ui.avatar(comment.display_alias, 'sm', avatar_keys.get(comment.author_id)) }}
                 <span class="post-author">{{ comment.display_alias }}</span>
                 <time datetime="{{ comment.created_at.isoformat() }}">
                     {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC

@@ -22,8 +22,15 @@
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
 {%- endmacro %}
 
-{% macro avatar(pseudonym, size="") %}
-<span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>
+{# Avatar: the picture a student picked from the built-in gallery, or the
+   initial on a palette tone when there is none. The anonymity guard lives here,
+   not at each caller: one forgotten call would be enough for an anonymous post
+   to de-anonymise its author, so `avatar_image_key` makes the decision for every
+   call site at once. `key=None` is the ordinary student without a picture, who
+   keeps the drawn circle; `size` is "" / "sm" / "lg". #}
+{% macro avatar(pseudonym, size="", key=None) %}
+{%- set image = avatar_url(avatar_image_key(pseudonym, key)) -%}
+{% if image %}<img class="avatar avatar--img{% if size %} avatar--{{ size }}{% endif %}" src="{{ image }}" alt="" aria-hidden="true">{% else %}<span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>{% endif %}
 {%- endmacro %}
 
 {# Average score, formatted in one place so every page shows the same thing: one

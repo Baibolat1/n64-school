@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}{{ student.alias }} — Модерация{% endblock %}
 {% block content %}
 {% include "admin/_nav.html" %}
 <section class="card">
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<h1>{{ student.alias }}</h1>
+<div class="page-header">
+    {{ ui.avatar(student.alias, 'lg', student.avatar_key) }}
+    <h1>{{ student.alias }}</h1>
+</div>
 <p class="back-link">
     <a href="/admin">&larr; В панель администратора</a>
 </p>

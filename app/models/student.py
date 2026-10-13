@@ -48,3 +48,7 @@ class Student(Base):
     last_seen_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # NULL means the student is drawn as a coloured circle with an initial;
+    # otherwise the value is a key of an image from the built-in gallery (there
+    # are no file uploads, see app.core.avatars).
+    avatar_key: Mapped[str | None] = mapped_column(Text, nullable=True)

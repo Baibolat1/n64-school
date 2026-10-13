@@ -2,10 +2,11 @@
    Included from teacher.html, which provides `review`, its `scores`
    (criterion id -> value) and the `criteria` list the labels come from. #}
 {% set scores = scores|default({}) %}
+{% set avatar_keys = avatar_keys|default({}) %}
 {% import "_macros.html" as ui %}
 <article class="post-card">
     <div class="post-meta">
-        {{ ui.avatar(review.display_alias, 'sm') }}
+        {{ ui.avatar(review.display_alias, 'sm', avatar_keys.get(review.student_id)) }}
         <span class="post-author">{{ review.display_alias }}</span>
         <time datetime="{{ review.created_at.isoformat() }}">
             {{ review.created_at.strftime('%d.%m.%Y %H:%M') }} UTC

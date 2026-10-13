@@ -17,6 +17,7 @@ from app.core.templates import templates
 from app.db.base import get_db
 from app.models.student import Student
 from app.services import aliases as aliases_service
+from app.services import avatars as avatars_service
 from app.services import invites as invites_service
 from app.services import login_throttle
 from app.services import registration
@@ -163,6 +164,13 @@ def _alias_error_message(result: aliases_service.AliasChangeResult) -> str:
     return "Не удалось изменить псевдоним"
 
 
+def _avatar_error_message(result: avatars_service.AvatarChangeResult) -> str:
+    """Human-readable refusal message for a failed avatar change."""
+    if result.reason is avatars_service.AvatarError.INVALID_KEY:
+        return "Такой картинки нет в галерее"
+    return "Не удалось изменить аватарку"
+
+
 def _render_me(
     request: Request,
     student: Student,
@@ -213,3 +221,17 @@ def change_alias(
         error=_alias_error_message(result),
         alias_value=result.alias,
     )
+
+
+@router.post("/me/avatar", response_class=HTMLResponse)
+def change_avatar(
+    request: Request,
+    avatar_key: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    result = avatars_service.set_avatar(db, student, avatar_key)
+    if result.ok:
+        # Post/Redirect/Get: a reload will not resubmit the form.
+        return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
+    return _render_me(request, student, error=_avatar_error_message(result))

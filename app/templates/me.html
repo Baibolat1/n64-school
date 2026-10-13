@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}Мой псевдоним{% endblock %}
+{% block title %}Мой профиль{% endblock %}
 {% block content %}
 <div class="page-header">
-    {{ ui.avatar(student.alias, 'lg') }}
+    {{ ui.avatar(student.alias, 'lg', student.avatar_key) }}
     <h1>{{ student.alias }}</h1>
 </div>
 
+{# One refusal slot for the whole page: both forms below redirect here on
+   success and re-render here on refusal, so the message belongs to neither
+   section in particular. #}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
 <section class="card">
     <h2>Сменить псевдоним</h2>
-    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-
     {% if can_change %}
     <form method="post" action="/me/alias" class="stacked-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -24,6 +27,32 @@
     <p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
         Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
     {% endif %}
+</section>
+
+<section class="card">
+    <h2>Аватарка</h2>
+    <p class="hint">Картинка показывается рядом с псевдонимом в ленте, на странице поста
+        и в отзывах. Менять её можно сколько угодно раз. Под анонимными записями
+        картинка не показывается: там всегда кружок.</p>
+
+    <form method="post" action="/me/avatar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="avatar-picker">
+            <label class="avatar-option">
+                <input type="radio" name="avatar_key" value=""{% if not student.avatar_key %} checked{% endif %}>
+                {{ ui.avatar(student.alias, 'lg', None) }}
+                <span class="visually-hidden">Без картинки</span>
+            </label>
+            {% for key in avatar_options() %}
+            <label class="avatar-option">
+                <input type="radio" name="avatar_key" value="{{ key }}"{% if student.avatar_key == key %} checked{% endif %}>
+                {{ ui.avatar(student.alias, 'lg', key) }}
+                <span class="visually-hidden">{{ avatar_label(key) }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit">Сохранить</button>
+    </form>
 </section>
 
 <section class="card">

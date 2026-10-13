@@ -20,6 +20,7 @@ from app.models.content import CONTENT_STATUS_VISIBLE, Post
 from app.models.student import Student
 from app.repositories import comments as comments_repo
 from app.repositories import posts as posts_repo
+from app.repositories import students as students_repo
 from app.schemas.feed import CommentCreate, PostCreate
 from app.services import feed as feed_service
 
@@ -92,6 +93,12 @@ def _render_feed(
     posts = posts_repo.list_visible_posts(
         db, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
     )
+    # The author's picture is always the current one, so it is fetched on every
+    # render rather than snapshotted with the record (unlike ``display_alias``),
+    # and in one query per page rather than one per card.
+    avatar_keys = students_repo.avatar_keys_by_id(
+        db, [post.author_id for post in posts]
+    )
     return templates.TemplateResponse(
         request,
         "feed.html",
@@ -99,6 +106,7 @@ def _render_feed(
             "student": student,
             "posts": [(post, comments_repo.count_visible_comments(db, post.id))
                       for post in posts],
+            "avatar_keys": avatar_keys,
             "page": page,
             "total_pages": total_pages,
             "error": error,
@@ -122,6 +130,11 @@ def _render_post(
     status_code: int = status.HTTP_200_OK,
 ) -> Response:
     comments = comments_repo.list_visible_comments(db, post.id)
+    # The same rule as the feed: the current picture of every author, in one
+    # query for the post and all its comments together.
+    avatar_keys = students_repo.avatar_keys_by_id(
+        db, [post.author_id, *(comment.author_id for comment in comments)]
+    )
     return templates.TemplateResponse(
         request,
         "post.html",
@@ -129,6 +142,7 @@ def _render_post(
             "student": student,
             "post": post,
             "comments": comments,
+            "avatar_keys": avatar_keys,
             "error": error,
             "comment_body": comment_body,
             "comment_is_anonymous": comment_is_anonymous,

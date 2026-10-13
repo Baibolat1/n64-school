@@ -5,6 +5,12 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
+from app.core.avatars import (
+    avatar_image_key,
+    avatar_label,
+    avatar_options,
+    avatar_url,
+)
 from app.core.csrf import csrf_context
 from app.core.ui import avatar_index, avatar_initial
 
@@ -20,6 +26,16 @@ templates = Jinja2Templates(
 # ``avatar_initial`` directly -- see app.core.ui.
 templates.env.globals.update(
     avatar_index=avatar_index, avatar_initial=avatar_initial
+)
+
+# The built-in gallery is a global as well, so the avatar macro can turn a stored
+# key into a picture without a caller knowing the /static layout -- see
+# app.core.avatars.
+templates.env.globals.update(
+    avatar_url=avatar_url,
+    avatar_image_key=avatar_image_key,
+    avatar_options=avatar_options,
+    avatar_label=avatar_label,
 )
 
 # The input caps are globals too, so a form can render its own ``maxlength``

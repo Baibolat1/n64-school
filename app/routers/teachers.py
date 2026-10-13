@@ -28,6 +28,7 @@ from app.models.student import Student
 from app.models.teacher import Teacher
 from app.repositories import criteria as criteria_repo
 from app.repositories import reviews as reviews_repo
+from app.repositories import students as students_repo
 from app.repositories import teachers as teachers_repo
 from app.services import reviews as reviews_service
 
@@ -141,6 +142,11 @@ def _render_teacher(
     reviews = reviews_repo.list_visible_reviews(
         db, teacher.id, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
     )
+    # The reviewer's picture is the current one, fetched in one query for the
+    # whole page rather than snapshotted with the review.
+    avatar_keys = students_repo.avatar_keys_by_id(
+        db, [review.student_id for review in reviews]
+    )
 
     # Everything the form needs, with anything just submitted winning over what
     # is stored -- that is what keeps a refusal from eating the student's text.
@@ -161,6 +167,7 @@ def _render_teacher(
             "criterion_stats": reviews_repo.criterion_stats(db, teacher.id),
             "overall": reviews_repo.overall_stats(db, teacher.id),
             "reviews": reviews,
+            "avatar_keys": avatar_keys,
             "scores_by_review": reviews_repo.scores_by_review(
                 db, [review.id for review in reviews]
             ),
