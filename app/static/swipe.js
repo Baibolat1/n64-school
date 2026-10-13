@@ -58,7 +58,11 @@
     });
     if (here < 0) return;
 
-    /* The blob ----------------------------------------------------------------- */
+    /* The lens ----------------------------------------------------------------- */
+
+    // Wider than the tab it stands on, by 6px on each side: the lens is a piece
+    // of glass laid over the tab, not a recolouring of it (see .bottomnav__blob).
+    const LENS_OVERHANG = 12;
 
     const blob = document.createElement("span");
     blob.className = "bottomnav__blob";
@@ -66,41 +70,59 @@
     nav.insertBefore(blob, nav.firstChild);
     nav.classList.add("is-js");
 
-    // The tabs are flex-sized, so no width is known in CSS and the blob has to
-    // be measured. It is translated rather than moved with `left`, so the
-    // browser animates it on the compositor instead of relaying out the bar at
-    // every frame. `instant` is for the first placement and for a resize: the
-    // blob is *already* somewhere on those, it does not travel there.
-    function moveBlob(index, instant) {
+    // The tabs are flex-sized, so no width is known in CSS and the lens has to
+    // be measured. Geometry comes from the tab's own rect rather than from
+    // arithmetic on index and count: the tabs are equal, but the gaps between
+    // them are the bar's, and a lens that assumed otherwise would drift a pixel
+    // per tab until it hung over the wrong label.
+    function lensFor(index) {
         const link = links[index];
-        if (!link) return;
+        if (!link) return null;
 
         const box = link.getBoundingClientRect();
-        if (!box.width) return; // hidden bar (wide screen): nothing to measure
+        if (!box.width) return null; // hidden bar (wide screen): nothing to measure
 
         const frame = nav.getBoundingClientRect();
+        return {
+            width: box.width + LENS_OVERHANG,
+            // Offsets of an absolutely positioned child are measured from the
+            // padding box, so the bar's own border comes off the distance --
+            // and the centre is what is kept, because the lens is not the width
+            // of the thing it centres on.
+            centre: box.left + box.width / 2 - frame.left - nav.clientLeft,
+        };
+    }
+
+    // It is translated rather than moved with `left`, so the browser animates
+    // it on the compositor instead of relaying out the bar at every frame.
+    // `instant` is for the first placement and for a resize: the lens is
+    // *already* somewhere on those, it does not travel there.
+    function place(width, centre, instant) {
+        // Both ends are clamped to the bar's inner width. The lens is wider
+        // than the tab it centres on, so on the first and the last tab it would
+        // otherwise hang over the capsule's rounded end; and a measurement
+        // taken while the bar was mid-relayout -- a rotation, the webfont
+        // landing a pixel later -- can leave a tab a hair wider than the room
+        // left for it. The lens may fall short of either end; it may not cross.
         if (instant) blob.classList.add("is-instant");
-        blob.style.width = box.width + "px";
-        // Offsets of an absolutely positioned child are measured from the
-        // padding box, so the bar's own border comes off the distance.
-        // Both ends are then clamped to the bar's inner width: the pill's
-        // position comes from a tab, and a measurement taken while the bar was
-        // mid-relayout -- a rotation, the webfont landing a pixel later -- can
-        // leave the last tab a hair wider than the room left for it. The pill
-        // may fall a pixel short of either edge; it may not cross one.
-        const travel = Math.max(box.left - frame.left - nav.clientLeft, 0);
-        const room = nav.clientWidth - box.width;
-        blob.style.transform =
-            "translate3d(" + Math.min(travel, Math.max(room, 0)) + "px, 0, 0)";
+        blob.style.width = width + "px";
+        const room = Math.max(nav.clientWidth - width, 0);
+        const travel = Math.min(Math.max(centre - width / 2, 0), room);
+        blob.style.transform = "translate3d(" + travel + "px, 0, 0)";
 
         if (instant) {
-            // Two frames: the first lets the browser paint the blob in place
+            // Two frames: the first lets the browser paint the lens in place
             // with the transition off, the second hands the element back to
             // CSS so the next move animates.
             window.requestAnimationFrame(() =>
                 window.requestAnimationFrame(() => blob.classList.remove("is-instant"))
             );
         }
+    }
+
+    function moveBlob(index, instant) {
+        const lens = lensFor(index);
+        if (lens) place(lens.width, lens.centre, instant);
     }
 
     moveBlob(here, true);
@@ -112,7 +134,7 @@
     // magnifying glass rather than like a hover state. Placed here rather than
     // in a file of its own because it measures the same tabs the blob does --
     // the two would otherwise each keep their own copy of that.
-    const MAGNIFY = 0.28; // growth right under the pointer (x1.28 at the peak)
+    const MAGNIFY = 0.2; // growth right under the finger (the icon under the lens)
     const LIFT = 2; // px the icon rises, so growing reads as coming up
     const SPREAD = 2.4; // reach of the glass, in tab widths
 
@@ -155,8 +177,114 @@
         });
     }
 
+    /* The drag on the bar ------------------------------------------------------ */
+
+    // The same gesture as the swipe, told the other way round: there the finger
+    // drags the *page* sideways and the lens previews where it would land; here
+    // the finger drags the *lens* along the bar and the page follows it on
+    // release. Both end in a page load, and both use the same lens.
+    //
+    // A drag is not a tap: a finger that moved 10px meant to move the lens, and
+    // the click the browser is about to fire on the tab it started from would
+    // navigate to the wrong place. That click is swallowed -- but only that one,
+    // and only if the gesture actually moved.
+
+    const DRAG_SLOP = 6; // px of travel that turns a tap into a drag
+    const FLICK = 0.55; // px/ms that carries the lens one tab further
+    const FLICK_WINDOW = 140; // ms of movement the flick is measured over
+
+    let dragging = false; // the finger is down on the bar
+    let dragged = false; // ...and it has moved far enough to mean it
+    let swallowClick = false;
+    let samples = [];
+
+    function nearestTab(clientX) {
+        let best = here;
+        let closest = Infinity;
+        links.forEach((link, index) => {
+            const box = link.getBoundingClientRect();
+            const distance = Math.abs(clientX - (box.left + box.width / 2));
+            if (distance < closest) {
+                closest = distance;
+                best = index;
+            }
+        });
+        return best;
+    }
+
+    // How fast the finger was going when it let go: a flick of the thumb is a
+    // request for the *next* tab, not for the one under it -- the same reading
+    // the page swipe takes, in the other axis.
+    function flickDirection() {
+        if (samples.length < 2) return 0;
+        const last = samples[samples.length - 1];
+        const first = samples[0];
+        const span = last.t - first.t;
+        if (span <= 0 || span > FLICK_WINDOW) return 0;
+        const speed = (last.x - first.x) / span;
+        return Math.abs(speed) > FLICK ? Math.sign(speed) : 0;
+    }
+
+    // The lens follows the finger at the finger's own speed: no lag and no
+    // inertia *while* dragging, because a lens that trails the finger makes the
+    // next tab feel uncertain. The inertia is on the other end of the gesture --
+    // the overshoot of --transition-dock and the flick above.
+    function follow(clientX) {
+        const lens = lensFor(here);
+        if (!lens) return;
+        const frame = nav.getBoundingClientRect();
+        place(lens.width, clientX - frame.left - nav.clientLeft, false);
+    }
+
+    function drop(event) {
+        if (!dragging) return;
+        dragging = false;
+        nav.classList.remove("is-swiping");
+        // A tap: the lens has not moved and the link under the finger is about
+        // to be followed on its own. Put it back where it belongs and get out.
+        if (!dragged) {
+            moveBlob(here);
+            return;
+        }
+
+        swallowClick = true;
+        const index = Math.min(
+            Math.max(nearestTab(event.clientX) + flickDirection(), 0),
+            sections.length - 1
+        );
+        // Snapped first, navigated second: the spring is 350ms and the page
+        // load takes longer than that to paint, so the lens is seen arriving
+        // before the page it announces replaces the one underneath it.
+        moveBlob(index);
+        if (index === here) return;
+
+        // One tab over is a direction, and the arriving page slides in from it
+        // (see the page transitions in layout.css). Two is not a direction.
+        if (Math.abs(index - here) === 1) {
+            try {
+                window.sessionStorage.setItem(FLAG, index > here ? "next" : "prev");
+            } catch (error) {
+                // No storage: the page still changes, it just does not animate.
+            }
+        }
+        window.setTimeout(() => window.location.assign(sections[index]), 200);
+    }
+
     if (!calm.matches) {
         nav.addEventListener("pointerdown", (event) => {
+            if (event.pointerType === "mouse" && event.button !== 0) return;
+            dragging = true;
+            dragged = false;
+            swallowClick = false;
+            samples = [{ x: event.clientX, t: event.timeStamp }];
+            // The finger may leave the bar mid-drag -- it is 68px tall -- and
+            // the lens has to keep following it. Not every engine throws here;
+            // the one that does keeps the magnifier and loses the capture.
+            try {
+                nav.setPointerCapture(event.pointerId);
+            } catch (error) {
+                // No capture: the drag ends where the bar does.
+            }
             nav.classList.add("is-magnifying");
             magnify(event.clientX);
         });
@@ -165,11 +293,49 @@
         nav.addEventListener("pointermove", (event) => {
             nav.classList.add("is-magnifying");
             magnify(event.clientX);
+            if (!dragging) return;
+
+            samples.push({ x: event.clientX, t: event.timeStamp });
+            if (samples.length > 6) samples.shift();
+            if (!dragged && Math.abs(event.clientX - samples[0].x) >= DRAG_SLOP) {
+                dragged = true;
+                // The lens swells for as long as the drag lasts and springs
+                // back on release (see .bottomnav.is-swiping in layout.css).
+                nav.classList.add("is-swiping");
+            }
+            if (dragged) follow(event.clientX);
         });
-        nav.addEventListener("pointerup", settle);
-        nav.addEventListener("pointercancel", settle);
-        nav.addEventListener("pointerleave", settle);
+        nav.addEventListener("pointerup", (event) => {
+            settle();
+            drop(event);
+        });
+        nav.addEventListener("pointercancel", () => {
+            settle();
+            dragging = false;
+            dragged = false;
+            nav.classList.remove("is-swiping");
+            moveBlob(here);
+        });
+        // Only when no drag is in flight: with the pointer captured the finger
+        // can leave the bar and come back, and the icons must not be dropped
+        // mid-gesture on the way out.
+        nav.addEventListener("pointerleave", () => {
+            if (!dragging) settle();
+        });
     }
+
+    // The one click that follows a drag, and only that one. Captured on the bar
+    // so it never reaches the tab underneath.
+    nav.addEventListener(
+        "click",
+        (event) => {
+            if (!swallowClick) return;
+            swallowClick = false;
+            event.preventDefault();
+            event.stopPropagation();
+        },
+        true
+    );
 
     /* The swipe ---------------------------------------------------------------- */
 

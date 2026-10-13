@@ -43,19 +43,30 @@
 
     /* The two bars and the floating dock are one material: a wash of white, a
        rim, and a blur with `saturate` behind it. Colourless on purpose -- what
-       says "this is glass" is the frost, not a tint -- and 24px is the blur
+       says "this is glass" is the frost, not a tint -- and 22px is the blur
        Safari renders on the GPU: a longer radius inside a fixed element is the
        one place iOS falls off the compositor and the pane turns opaque.
        No SVG filter here: refraction (a `feDisplacementMap` over the page
        behind) is a WebKit-only trick, invisible everywhere else, and it costs
        a full-page repaint on every scroll to work. */
-    --dock: rgba(255, 255, 255, .06);
-    --dock-line: rgba(255, 255, 255, .12);
-    --dock-blur: 24px;
-    --dock-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+    --dock: rgba(255, 255, 255, .07);
+    --dock-line: rgba(255, 255, 255, .14);
+    --dock-blur: 22px;
+    --dock-shadow: 0 12px 32px rgba(0, 0, 0, .45);
     /* The lit top edge is the same sheen and rim every other panel wears
        (--glass-sheen in the background stack, --glass-highlight in the shadow):
        one gradient per surface, not a second one invented for the bar. */
+
+    /* The lens: the piece of glass that travels between tabs and says which
+       one you are on. Brighter than the control it stands for -- it is read
+       *through* the bar's own fill -- and ringed by a rim that is very nearly
+       colourless: a conic sweep of four hues at 20-30% alpha, which on an
+       obsidian page reads as light catching an edge and not as a rainbow. */
+    --dock-lens: rgba(255, 255, 255, .16);
+    --dock-lens-rim: conic-gradient(from 200deg,
+        rgba(255, 255, 255, .38), rgba(120, 175, 255, .30),
+        rgba(255, 160, 220, .22), rgba(255, 220, 150, .20),
+        rgba(140, 245, 220, .22), rgba(255, 255, 255, .38));
 
     --glass-line: rgba(255, 255, 255, .08);
     --glass-line-strong: rgba(255, 255, 255, .20);
@@ -143,17 +154,22 @@
     --radius-m: 18px;
     --radius-l: 26px;
     --radius-xl: 34px;
-    --radius-dock: 40px;        /* the floating capsule's own corner */
-    --radius-dock-tab: 24px;    /* the selected tab inside it */
+    /* Both are capsules now, so both ask for the pill: the bar is 68px tall and
+       the lens 56px, and a 34px corner on either is the same shape as half of
+       its own height. */
+    --radius-dock: var(--radius-pill);      /* the floating capsule itself */
+    --radius-dock-tab: var(--radius-pill);  /* the lens that travels inside it */
     --radius-pill: 999px;
     --content-max: 44rem;
-    --nav-h: 3.5rem;
+    --nav-h: 4.25rem;           /* 68px: the floating bar's own height */
+    --dock-lens-h: 3.5rem;      /* 56px: the lens, 6px past the tab it stands on */
     /* How much room the floating bottom bar needs at the foot of a page: the
-       bar itself, the safe-area inset under it and a thumb's worth of air, so
-       the last post of the feed is never left behind it. One token, because
-       three rules have to agree on it -- the body's bottom padding, the fade
-       above the bar and the bar's own height (see layout.css). */
-    --dock-clearance: calc(var(--nav-h) + 5.25rem);
+       bar itself, the gap it floats by, the safe-area inset under it and a
+       thumb's worth of air, so the last post of the feed is never left behind
+       it. One token, because three rules have to agree on it -- the body's
+       bottom padding, the fade above the bar and the bar's own height (see
+       layout.css). */
+    --dock-clearance: calc(var(--nav-h) + 2.25rem);
 
     /* Two shadows per surface: a tight contact one that pins the pane to the
        page, and a wide ambient one that lifts it off. A single soft shadow
@@ -173,6 +189,11 @@
     /* Overshoots and settles: the motion of a thing with a little weight to it.
        Used where something *arrives* -- the selected tab, a page sliding in. */
     --transition-spring: 460ms cubic-bezier(.3, 1.25, .4, 1);
+    /* The lens' own arrival, and the icons' return under it. Shorter and with
+       more overshoot than the spring above: this one is thrown by a flick, so
+       it is read many times a session and has to be over before the next page
+       has even painted. */
+    --transition-dock: 350ms cubic-bezier(.34, 1.56, .64, 1);
 }
 
 /* Self-hosted webfonts. Each family is a variable font, so one woff2 per

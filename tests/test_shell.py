@@ -97,10 +97,99 @@ def test_the_pill_follows_the_finger_and_lifts(student):
     script = student.client.get("/static/swipe.js").text
 
     assert 'nav.classList.add("is-swiping")' in script
-    assert script.count('classList.remove("is-swiping")') == 2  # release and cancel
+    # Four ways out of the gesture: the page swipe ends, the page swipe is
+    # cancelled, the bar drag is dropped and the bar drag is cancelled. A path
+    # that forgot one leaves the lens swollen for good.
+    assert script.count('classList.remove("is-swiping")') == 4
     assert "moveBlob(wanted < 0 ? here : wanted)" in script
-    # The clamp that keeps the pill inside the bar it was measured against.
-    assert "nav.clientWidth - box.width" in script
+    # The clamp that keeps the lens inside the bar it was measured against.
+    assert "nav.clientWidth - width" in script
+
+
+def test_the_lens_is_measured_from_the_tab_not_counted(student):
+    """Geometry comes from the tab's own rect, not from dividing the bar.
+
+    The lens is 12px wider than the tab it stands on, so it cannot be a
+    fraction of the bar: on the first and the last tab it would hang over the
+    capsule's rounded end. The script centres it on the tab and clamps it.
+    """
+    script = student.client.get("/static/swipe.js").text
+
+    assert "const LENS_OVERHANG = 12;" in script
+    assert "getBoundingClientRect()" in script
+    assert "box.width + LENS_OVERHANG" in script
+    # Re-measured whenever the bar changes shape, not only on navigation.
+    for trigger in ('"resize"', '"orientationchange"', '"load"', "fonts.ready"):
+        assert trigger in script
+
+
+def test_a_drag_is_not_a_tap(student):
+    """The bar drag follows the finger, and swallows the click it produces.
+
+    A finger that moved meant to move the lens; the click the browser fires on
+    the tab it started from would then navigate somewhere else. One click is
+    swallowed -- and a tap, which never moved, is left to the link.
+    """
+    script = student.client.get("/static/swipe.js").text
+
+    assert "const DRAG_SLOP = 6;" in script
+    assert "nav.setPointerCapture(event.pointerId)" in script
+    # The flick: the same reading as the swipe, one axis over.
+    assert "const FLICK = 0.55;" in script
+    assert "flickDirection()" in script
+
+    # The stop is registered in the capture phase, so it never reaches the tab.
+    swallow = re.search(
+        r'nav\.addEventListener\(\s*"click",(.*?)\}\s*,\s*true\s*\)', script, re.S
+    )
+    assert swallow, "the drag does not swallow the click that follows it"
+    assert "swallowClick" in swallow.group(1)
+    assert "preventDefault" in swallow.group(1)
+
+    # And a tap is still a tap: the link is never touched while nothing moved.
+    assert "if (!dragged) {" in script
+
+
+def test_the_dock_floats_twelve_pixels_off_the_edges():
+    theme = _css("theme.css")
+    layout = _css("layout.css")
+
+    dock = re.search(r"\.bottomnav \{(.*?)\}", layout, re.S).group(1)
+    # 12px on each side, and never less than the notch in landscape.
+    for edge in ("right", "left"):
+        assert "max(var(--space-3), env(safe-area-inset-%s))" % edge in dock
+    assert "bottom: calc(var(--space-3) + env(safe-area-inset-bottom))" in dock
+    # A fixed height: the lens is taller than the tab it stands on, and a bar
+    # sized by its contents would grow and shrink as the lens passed each tab.
+    assert "height: var(--nav-h)" in dock
+    assert re.search(r"--nav-h: 4\.25rem;", theme), "the bar is 68px tall"
+    assert "padding: var(--space-2);" in dock  # 8px of air inside, all four sides
+
+    # Without a frost to hide behind the capsule is opaque, not translucent:
+    # otherwise the page's own text runs straight through the labels.
+    fallback = re.search(
+        r"@supports not \(\(backdrop-filter.*?\{(.*?)\}\s*\}", layout, re.S
+    )
+    assert fallback, "the dock has no fallback for a browser without backdrop-filter"
+    assert "var(--surface-1)" in fallback.group(1)
+
+
+def test_a_tab_is_26px_of_icon_and_11px_of_label():
+    layout = _css("layout.css")
+
+    icon = re.search(r"\.bottomnav \.icon \{(.*?)\}", layout, re.S).group(1)
+    assert "width: 1.625rem" in icon  # 26px
+    assert "height: 1.625rem" in icon
+
+    tab = re.search(r"\.bottomnav > a,\n\.bottomnav > span \{(.*?)\}", layout, re.S).group(1)
+    assert "font-size: 0.6875rem" in tab  # 11px
+    assert "white-space: nowrap" in tab  # a wrapped label makes one tab taller
+
+    # The four tabs you are not in sit back; the one you are in does not.
+    dimmed = re.search(r"\.bottomnav > a \{(.*?)\}", layout, re.S).group(1)
+    assert "opacity: .6" in dimmed
+    active = re.search(r"\.bottomnav \.is-active \{(.*?)\}", layout, re.S).group(1)
+    assert "opacity: 1" in active
 
 
 # --- The profile ---------------------------------------------------------------
@@ -198,6 +287,10 @@ def test_the_dock_is_a_capsule_of_its_own_material():
         assert token in theme
     assert "--radius-dock:" in theme
     assert "--radius-dock-tab:" in theme
+    # The lens: brighter than the control it stands for, with a rim of its own.
+    assert "--dock-lens:" in theme
+    assert "--dock-lens-rim:" in theme
+    assert "--dock-lens-h:" in theme
 
     dock = re.search(r"\.bottomnav \{(.*?)\}", layout, re.S).group(1)
     for declaration in (
@@ -206,7 +299,7 @@ def test_the_dock_is_a_capsule_of_its_own_material():
         "var(--radius-dock)",
         "var(--dock-shadow)",
         "var(--dock-blur)",
-        "var(--space-4)",
+        "var(--space-3)",
     ):
         assert declaration in dock
 
@@ -218,8 +311,8 @@ def test_the_dock_is_a_capsule_of_its_own_material():
     assert "border: 1px solid transparent" in tab.group(1)
 
     active = re.search(r"\.bottomnav \.is-active \{(.*?)\}", layout, re.S).group(1)
-    assert "var(--control-line)" in active
-    assert "var(--control-hover)" in active
+    assert "var(--dock-line)" in active
+    assert "var(--dock-lens)" in active
 
 
 def test_the_pill_lifts_inside_the_bar_and_comes_home_on_the_spring():
@@ -228,7 +321,7 @@ def test_the_pill_lifts_inside_the_bar_and_comes_home_on_the_spring():
     lift = re.search(
         r"\.bottomnav\.is-swiping \.bottomnav__blob \{(.*?)\}", layout, re.S
     ).group(1)
-    assert "scale: 1.12" in lift
+    assert "scale: 1.15" in lift
     # The lift cannot live in `transform`: the script rewrites that every frame
     # while the finger is down, and it would be wiped out by the movement it is
     # supposed to accompany. `transform-origin` is not that property.
@@ -236,7 +329,10 @@ def test_the_pill_lifts_inside_the_bar_and_comes_home_on_the_spring():
     assert "transition: none" in lift
 
     blob = re.search(r"\.bottomnav__blob \{(.*?)\}", layout, re.S).group(1)
-    assert "scale var(--transition-spring)" in blob
+    assert "scale var(--transition-dock)" in blob
+    # 68px of bar, 56px of lens: the lift has room to grow without spilling
+    # over the capsule's edge.
+    assert re.search(r"--dock-lens-h: 3\.5rem;", _css("theme.css"))
 
 
 def test_the_dock_clears_the_content_by_the_same_token():
@@ -246,7 +342,9 @@ def test_the_dock_clears_the_content_by_the_same_token():
 
     clearance = re.search(r"--dock-clearance: (calc\([^;]*\));", theme).group(1)
     assert "var(--nav-h)" in clearance
-    assert "5.25rem" in clearance  # 56px of bar plus 84px of air = 140px
+    # 68px of bar plus 36px of air: the 12px the capsule floats by, and the
+    # 24px that keeps the last control of a page out from under it.
+    assert "2.25rem" in clearance
     assert layout.count("var(--dock-clearance)") == 2  # the padding and the fade
 
 

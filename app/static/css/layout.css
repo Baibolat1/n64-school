@@ -417,22 +417,25 @@ body::before {
 
 /* Bottom mobile bar -------------------------------------------------------- */
 
-/* A floating capsule of glass, inset from the screen edges the way a modern
-   iOS tab bar is: it reads as a control sitting on top of the page rather than
-   a slab welded to the bottom of it. The fill is the one dark surface lighter
-   than the page (--dock in theme.css) -- at the page's own colour the capsule
-   would be invisible over a page that is already that colour, and the whole
-   point of a Dock is that you can see its edges.
+/* A floating capsule of glass, floating 12px clear of the screen edges the way
+   a modern iOS tab bar does: it reads as a control sitting on top of the page
+   rather than a slab welded to the bottom of it. The fill is the one dark
+   surface lighter than the page (--dock in theme.css) -- at the page's own
+   colour the capsule would be invisible over a page that is already that
+   colour, and the whole point of a Dock is that you can see its edges.
 
-   The material is the same white-at-an-alpha the panels wear, at 6% with a
-   24px blur: what holds the text behind it back is the frost, not darkness.
+   The material is the same white-at-an-alpha the panels wear, at 7% with a
+   22px blur: what holds the text behind it back is the frost, not darkness.
    That is why there is no SVG filter here -- refraction would be WebKit-only
    and would repaint the page under the bar on every scroll (theme.css). */
 .bottomnav {
     position: fixed;
-    right: max(var(--space-4), env(safe-area-inset-right));
-    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-    left: max(var(--space-4), env(safe-area-inset-left));
+    /* 12px on three sides, and never less than the notch's inset on the two
+       that have one: in landscape the capsule has to clear the rounded corner
+       *and* keep the same gap the portrait layout has. */
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    left: max(var(--space-3), env(safe-area-inset-left));
     z-index: 30;
     display: flex;
     align-items: stretch;
@@ -441,17 +444,22 @@ body::before {
        distance from their edges and neither runs off the end. */
     justify-content: space-between;
     gap: var(--space-1);
-    /* Same inset on all four sides, so the first and the last tab sit the same
-       distance from their edges -- and the same inset the blob is placed
-       against (see --space-1 in .bottomnav__blob). */
-    padding: var(--space-1);
+    /* A fixed height rather than one grown by its contents: the lens is taller
+       than the tab it stands on (--dock-lens-h against the 52px left inside
+       the padding), and a bar that sized itself to the tallest thing in it
+       would grow and shrink as the lens passed each tab. */
+    height: var(--nav-h);
+    /* 8px of air on every side: the tabs then stand 52px tall, the 56px lens
+       overhangs them by 2px top and bottom, and 1.15 of the lens under the
+       finger still stops 6px short of the capsule's edge. */
+    padding: var(--space-2);
     max-width: 30rem;
     margin: 0 auto;
-    /* A finger rubbed sideways along the bar drives the magnifier, so sideways
-       movement here is not a scroll and the browser is told as much: without
-       it the gesture is claimed by the page after a few pixels and the icons
-       are left mid-growth. Up and down still scrolls -- the bar is thin and a
-       page is easy to catch on it. */
+    /* A finger dragged sideways along the bar moves the lens and drives the
+       magnifier, so sideways movement here is not a scroll and the browser is
+       told as much: without it the gesture is claimed by the page after a few
+       pixels and the icons are left mid-growth. Up and down still scrolls --
+       the bar is thin and a page is easy to catch on it. */
     touch-action: pan-y;
     background: var(--glass-sheen), var(--dock);
     border: 1px solid var(--dock-line);
@@ -461,6 +469,15 @@ body::before {
     box-shadow: var(--dock-shadow), var(--glass-highlight);
     backdrop-filter: blur(var(--dock-blur)) saturate(180%);
     -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+}
+
+/* No frost to hide behind, so the capsule stops being a window and becomes a
+   surface. Opaque, not just darker: a translucent bar without a blur is the
+   one case where the page's own text runs straight through the labels. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .bottomnav {
+        background: var(--surface-1);
+    }
 }
 
 /* Every tab carries the same transparent hairline as the selected one, so the
@@ -474,17 +491,29 @@ body::before {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    min-height: 2.9rem;
-    padding: var(--space-2) var(--space-1);
+    gap: 2px;
+    min-width: 0;
+    padding: var(--space-1);
     color: var(--text-dim);
     background: none;
     border: 1px solid transparent;
     border-radius: var(--radius-dock-tab);
-    font-size: 0.68rem;
+    /* 11px, one line, never two: a label that wrapped would push its icon up
+       and make one tab taller than the four next to it. */
+    font-size: 0.6875rem;
     line-height: 1;
-    transition: color var(--transition-fast), background var(--transition-fast),
+    white-space: nowrap;
+    transition: color var(--transition-fast), opacity var(--transition-fast),
+                background var(--transition-fast),
                 border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Four tabs sit back and one is the place you are: the unselected ones drop to
+   60%, which is where an 11px label is still legible while the selected tab
+   clearly reads as the choice. Set on the link and not on the *contents*, so a
+   tab faded out is faded as a whole -- icon, label and all. */
+.bottomnav > a {
+    opacity: .6;
 }
 
 .bottomnav > a:hover {
@@ -493,7 +522,7 @@ body::before {
 
 /* The press is felt, not just seen: the whole tab gives under the finger. */
 .bottomnav > a:active {
-    transform: scale(.95);
+    transform: scale(.97);
 }
 
 /* The selected tab: a capsule of thicker glass sitting inside the dock, with
@@ -501,8 +530,9 @@ body::before {
    selection is the same material with more of it. */
 .bottomnav .is-active {
     color: #fff;
-    background: var(--glass-sheen), var(--control-hover);
-    border-color: var(--control-line);
+    opacity: 1;
+    background: var(--glass-sheen), var(--dock-lens);
+    border-color: var(--dock-line);
     box-shadow: var(--glass-highlight);
 }
 
@@ -514,34 +544,63 @@ body::before {
    selected tab stops being *painted* selected and starts *being* selected, the
    way a segmented control behaves. `is-js` is set by static/swipe.js, so the
    fallback above is what runs if the script never loads. */
-/* It has to cover exactly the tab it stands for. `top` and `bottom` are measured
-   from the padding box, which is where the flex tabs begin, so they are the
-   bar's own padding and nothing else; for the same reason the script takes the
-   border off the horizontal distance it measures. */
+/* It is the tab it stands for and a little more of it: 6px wider on each side
+   and 2px taller top and bottom, so the glass reads as a lens laid *over* the
+   tab rather than as a recolouring of it. Width comes from the script, which
+   measures the tab; the height is the token both the script and the bar agree
+   on. `top` is measured from the padding box, which is where the flex tabs
+   begin; for the same reason the script takes the border off the horizontal
+   distance it measures. */
 .bottomnav__blob {
     position: absolute;
-    top: var(--space-1);
-    bottom: var(--space-1);
+    top: 50%;
     left: 0;
     z-index: 0;
     width: 0;
+    height: var(--dock-lens-h);
+    margin-top: calc(var(--dock-lens-h) / -2);
     /* The selected tab is a capsule of thicker glass, not a coloured pill: the
        whole bar is white-at-an-alpha, and the selection is the same material
        with more of it. It is the very shape the tab itself wears without the
        script -- same corner, same rim -- so the highlight arrives as the same
        object and only stops being painted per tab. */
-    background: var(--glass-sheen), var(--control-hover);
-    border: 1px solid var(--control-line);
+    background: var(--glass-sheen), var(--dock-lens);
+    border: 1px solid var(--dock-line);
     border-radius: var(--radius-dock-tab);
     box-shadow: var(--glass-highlight);
     pointer-events: none;
     /* `scale` travels with the transform and never inside it: the script
        rewrites `transform` frame by frame while the finger is down, and a lift
        folded into that value would be wiped out by the very movement it is
-       meant to accompany. As its own property the two compose -- so the pill
+       meant to accompany. As its own property the two compose -- so the lens
        glides and swells at once, and the spring carries both home on release. */
-    transition: transform var(--transition-spring), scale var(--transition-spring),
-                width var(--transition-spring), opacity var(--transition-fast);
+    transition: transform var(--transition-dock), scale var(--transition-dock),
+                width var(--transition-dock), opacity var(--transition-fast);
+}
+
+/* The rim of the lens: a conic sweep of four hues, 1px wide, following the
+   capsule's own corner. Drawn as a ring rather than as a border because a
+   border takes one colour, and painted only where the browser can subtract the
+   middle out of it -- a mask that cannot be subtracted would fill the whole
+   lens with the gradient, so without it the plain hairline above stands alone
+   and nothing looks broken. */
+@supports ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+    .bottomnav__blob::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 1px;
+        border-radius: inherit;
+        background: var(--dock-lens-rim);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        /* Kept quiet on purpose: at full strength a full sweep of colour around
+           a 78px pill turns the navigation into a lit sign. */
+        opacity: .55;
+        pointer-events: none;
+    }
 }
 
 /* Laid down the first time without travelling from nowhere. */
@@ -549,17 +608,18 @@ body::before {
     transition: none;
 }
 
-/* Under the finger the pill lifts: the same capsule, a little larger, so the
+/* Under the finger the lens lifts: the same capsule, a little larger, so the
    drag has a body to it and the eye can see which tab the finger is over
    before it lets go -- the tab it will land on. `is-swiping` is put on the bar
    by static/swipe.js for exactly as long as the gesture lasts.
 
-   1.12 about the centre grows the pill by 6% of its own width on each side --
-   about 3.5px on a phone, against the 4px of the bar's own padding, so the
-   pill swells inside the capsule instead of spilling over its edge. */
+   1.15 about the centre grows the lens by 5.9px on each side and 4.2px top and
+   bottom: against the 8px of padding the capsule keeps, and the 6px of airline
+   the lens has at either end of its travel, it swells inside the bar instead of
+   spilling over its edge. */
 .bottomnav.is-swiping .bottomnav__blob {
     transform-origin: center;
-    scale: 1.12;
+    scale: 1.15;
     transition: none;
 }
 
@@ -574,8 +634,13 @@ body::before {
    it overlaps its own label a little -- and nothing in the bar reflows, which
    is what keeps the labels still while the icon above them swells. */
 .bottomnav .icon {
+    /* 26px: this bar is read at arm's length, with a thumb already covering the
+       bottom half of it, and the 1.2em an icon is everywhere else measures some
+       19px here. The label below it is the same 11px as any other caption. */
+    width: 1.625rem;
+    height: 1.625rem;
     transform: translateY(var(--dock-lift, 0)) scale(var(--dock-scale, 1));
-    transition: transform 380ms var(--transition-spring);
+    transition: transform var(--transition-dock);
 }
 
 /* Under the finger the values change every frame and a transition would only
