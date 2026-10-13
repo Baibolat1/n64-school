@@ -1,41 +1,64 @@
 /* ==========================================================================
    Theme foundation: design tokens, self-hosted webfonts, reset and base
    typography. Loaded first, before layout.css and components.css.
+
+   The look is "liquid glass": a deep, slightly blue night background with a few
+   soft colour lights behind it, and every panel is a sheet of frosted glass
+   laid over that background. The glass only reads as glass if there is
+   something behind it to blur, which is why the lights live on the body itself
+   (see layout.css, ``.app-lights``) and not on the cards.
    ========================================================================== */
 
 :root {
     color-scheme: dark;
 
     /* Palette -------------------------------------------------------------- */
-    --bg: #0a0f1c;              /* near-black with a blue cast: page background */
+    --bg: #04060d;              /* near-black with a blue cast: page background */
     --bg-deep: #070b14;         /* nav bars and recessed surfaces */
-    --surface-1: #111827;       /* card: one step lighter than the background */
-    --surface-2: #18202f;       /* nested layer: comments, input fields */
-    --surface-glass: rgba(10, 15, 28, .72);   /* glass card on the login screen */
-    /* The same card on a phone, where it takes nearly the whole screen and a
-       .72 wash reads as a solid block over the photo: lighter, so the
-       background stays visible behind the auth panel. */
-    --surface-glass-soft: rgba(10, 15, 28, .55);
+    --bg-lift: #0b1120;         /* one step up, for gaps between panels */
+    --surface-1: #111827;       /* opaque card, where blur is not wanted */
+    --surface-2: #18202f;       /* nested layer: inputs, chips */
+
+    /* Glass. Three strengths, because the same 55% wash reads very differently
+       on a wide desktop panel and on a phone panel that covers the screen. */
+    --glass: rgba(21, 27, 45, .55);
+    --glass-strong: rgba(13, 18, 32, .72);
+    --glass-soft: rgba(27, 34, 56, .42);
+    --glass-line: rgba(255, 255, 255, .10);
+    --glass-line-strong: rgba(255, 255, 255, .20);
+    --glass-blur: 22px;
+    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .07);
+
+    /* Kept under their old names: the login screen and its photo background
+       still ask for exactly these two. */
+    --surface-glass: var(--glass-strong);
+    --surface-glass-soft: var(--glass-soft);
+
     --line: rgba(245, 240, 225, .10);         /* low-contrast borders and rules */
     --line-strong: rgba(245, 240, 225, .18);
-    --cream: #f5f0e1;           /* accent: headings, links, buttons, icons */
-    --text: #e8e6df;
-    --text-dim: #9aa2b1;
-    --danger: #e8a0a0;
-    --warning: #e3c88a;
-    --success: #9fd6b4;
 
-    /* Avatar palette: six muted tones that read under cream initials. */
-    --avatar-0: #6b7a99;
-    --avatar-1: #7d6f96;
-    --avatar-2: #5f8a86;
-    --avatar-3: #9a7b6b;
-    --avatar-4: #6f8aa0;
-    --avatar-5: #8a7f63;
+    /* Accent: the iOS blue, with a violet partner for gradients and lights. */
+    --accent: #0a84ff;
+    --accent-2: #6d5efc;
+    --accent-soft: rgba(10, 132, 255, .16);
+    --cream: #f2efe4;           /* warm accent kept for headings and the brand */
+    --text: #e9edf6;
+    --text-dim: #98a2ba;
+    --danger: #ff6b6b;
+    --warning: #ffd166;
+    --success: #4ade80;
+
+    /* Avatar palette: six tones that read under cream initials. */
+    --avatar-0: #5b6ee1;
+    --avatar-1: #9b5de5;
+    --avatar-2: #14b8a6;
+    --avatar-3: #f97362;
+    --avatar-4: #38bdf8;
+    --avatar-5: #f0abfc;
 
     /* Fonts ---------------------------------------------------------------- */
     --font-display: "Cormorant Garamond", Georgia, serif;
-    --font-body: "Inter", system-ui, -apple-system, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 
     /* Spacing scale -------------------------------------------------------- */
     --space-1: 0.25rem;
@@ -57,14 +80,18 @@
     --step-5: clamp(2.5rem, 1.95rem + 2.5vw, 4rem);
 
     /* Radii, layout, depth, motion ---------------------------------------- */
-    --radius-s: 8px;
-    --radius-m: 12px;
-    --radius-l: 18px;
-    --content-max: 42rem;
-    --nav-h: 3.25rem;
-    --shadow-soft: 0 10px 30px rgba(7, 11, 20, .38);
-    --transition-fast: 160ms ease;
-    --transition-slow: 240ms ease;
+    --radius-s: 10px;
+    --radius-m: 16px;
+    --radius-l: 22px;
+    --radius-xl: 28px;
+    --radius-pill: 999px;
+    --content-max: 44rem;
+    --nav-h: 3.5rem;
+    --shadow-soft: 0 10px 30px rgba(3, 6, 14, .45);
+    --shadow-glass: 0 18px 44px rgba(3, 6, 14, .55);
+    --shadow-raised: 0 8px 20px rgba(3, 6, 14, .5);
+    --transition-fast: 160ms cubic-bezier(.32, .72, 0, 1);
+    --transition-slow: 280ms cubic-bezier(.32, .72, 0, 1);
 }
 
 /* Self-hosted webfonts. Each family is a variable font, so one woff2 per
@@ -118,7 +145,10 @@ body,
 h1,
 h2,
 h3,
-p {
+p,
+ol,
+ul,
+figure {
     margin: 0;
 }
 
@@ -126,7 +156,8 @@ body {
     min-height: 100vh;
     font-family: var(--font-body);
     font-size: var(--step-0);
-    line-height: 1.5;
+    line-height: 1.55;
+    letter-spacing: -0.011em;
     color: var(--text);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
@@ -135,38 +166,57 @@ body {
 
 /* Base typography ---------------------------------------------------------- */
 
+/* The serif is the brand's voice and is spent sparingly: the wordmark and the
+   big page titles. Everything that is interface -- section headings, buttons,
+   counters -- is the sans, which is what makes an app feel like an app. */
 h1,
 h2,
 h3 {
-    font-family: var(--font-display);
     font-weight: 600;
     line-height: 1.15;
+    color: var(--text);
+}
+
+h1 {
+    font-family: var(--font-display);
+    font-size: var(--step-4);
     letter-spacing: 0.005em;
     color: var(--cream);
 }
 
-h1 {
-    font-size: var(--step-4);
-}
-
 h2 {
-    font-size: var(--step-3);
+    font-size: var(--step-1);
+    letter-spacing: -0.018em;
 }
 
 h3 {
-    font-size: var(--step-2);
+    font-size: var(--step-0);
+    letter-spacing: -0.012em;
 }
 
 a {
-    color: var(--cream);
+    color: var(--text);
     text-decoration: none;
+    transition: color var(--transition-fast);
 }
 
 a:hover {
-    text-decoration: underline;
+    color: #fff;
+}
+
+ul,
+ol {
+    padding: 0;
+    list-style: none;
 }
 
 :focus-visible {
-    outline: 2px solid var(--cream);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
+    border-radius: var(--radius-s);
+}
+
+::selection {
+    background: var(--accent-soft);
+    color: #fff;
 }

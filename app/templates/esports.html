@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Киберспорт{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Киберспорт школы</p>
+        <h1>Турниры</h1>
+    </div>
+</div>
+
+{# Игры и награды -- данные: подписи приходят словарями из
+   app.services.esports, поэтому новый турнир или новая награда появляются на
+   странице без единой правки этого шаблона. #}
+{% if tournaments %}
+<div class="game-filter">
+    {% for code in ['cs2', 'brawl'] %}
+    <span class="chip chip--{{ code }}">{{ ui.icon('gamepad') }} {{ game_label(code) }}</span>
+    {% endfor %}
+</div>
+
+<div class="tourney-grid">
+    {% for tournament in tournaments %}
+    <article class="glass tourney tourney--{{ tournament.game }}">
+        <header class="tourney-head">
+            <span class="tourney-game">{{ game_label(tournament.game) }}</span>
+            <span class="status status--{{ tournament.status }}">{{ status_label(tournament.status) }}</span>
+        </header>
+        <h2 class="tourney-title">{{ tournament.title }}</h2>
+        <p class="tourney-meta">
+            {% if tournament.format %}<span>{{ tournament.format }}</span>{% endif %}
+            {% if tournament.starts_at %}
+            <span>{{ ui.icon('clock') }} {{ tournament.starts_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            {% endif %}
+        </p>
+        {% if tournament.description %}
+        <p class="tourney-desc">{{ tournament.description }}</p>
+        {% endif %}
+
+        {% set group = badges.get(tournament.id, []) %}
+        {% if group %}
+        <ul class="roster">
+            {% for badge in group %}
+            <li class="roster-item">
+                {{ ui.avatar(aliases.get(badge.student_id, '—'), 'sm', avatar_keys.get(badge.student_id)) }}
+                <span class="roster-name">{{ aliases.get(badge.student_id, 'Ученик') }}</span>
+                {{ ui.medal(badge.code, badge_label(badge.code)) }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">Награды ещё не выданы.</p>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<section class="glass">
+    <p class="muted">Турниров пока нет. Как только школа объявит первый — он появится здесь.</p>
+</section>
+{% endif %}
+{% endblock %}

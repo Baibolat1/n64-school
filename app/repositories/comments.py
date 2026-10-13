@@ -33,6 +33,20 @@ def create_comment(
     return comment
 
 
+def find_by_post_and_body(
+    db: Session, post_id: int, body: str
+) -> Comment | None:
+    """Return the comment of ``post_id`` whose text is ``body``, or None.
+
+    Only the demo seeder asks this, for the same reason as
+    ``app.repositories.posts.get_post_by_body``: it recognises the rows it wrote
+    by their text. Status is not filtered -- a hidden demo comment must not be
+    inserted a second time.
+    """
+    stmt = select(Comment).where(Comment.post_id == post_id, Comment.body == body)
+    return db.execute(stmt).scalars().first()
+
+
 def get_comment(db: Session, comment_id: int) -> Comment | None:
     """Return the comment with ``comment_id`` regardless of status, or None.
 

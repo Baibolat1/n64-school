@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Расписание{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Школьный день</p>
+        <h1>Расписание{% if student.class_name %} · {{ student.class_name }}{% endif %}</h1>
+    </div>
+    <a class="chip" href="/assistant">{{ ui.icon('sparkles') }} Спросить ассистента</a>
+</div>
+
+{% if not student.class_name %}
+<section class="glass">
+    <h2>Класс не указан</h2>
+    <p class="hint">Ваш класс не задан в профиле, поэтому расписание и домашнее
+        задание показать нечего. Обратитесь к администратору школы.</p>
+</section>
+{% else %}
+
+{# Сегодняшний день вынесен наверх отдельной панелью: это то, что нужно в
+   девяносто процентов заходов, и ради этого не стоит искать строку в таблице. #}
+{% if today_weekday %}
+<section class="glass glass--hero">
+    <div class="hero-head">
+        {{ ui.icon('calendar') }}
+        <h2>Сегодня · {{ day_labels[today_weekday] }}</h2>
+    </div>
+    {% if today_lessons %}
+    <ol class="timeline">
+        {% for lesson in today_lessons %}
+        <li class="timeline-item">
+            <span class="timeline-time">{{ lesson.starts_at }}<small>{{ lesson.ends_at }}</small></span>
+            <span class="timeline-body">
+                <span class="timeline-subject">{{ lesson.subject }}</span>
+                {% if lesson.room %}<span class="timeline-room">{{ ui.icon('pin') }} {{ lesson.room }}</span>{% endif %}
+            </span>
+            <span class="timeline-index">{{ lesson.lesson_no }}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">Сегодня уроков нет — отдыхайте.</p>
+    {% endif %}
+    {% if notes %}
+    <ul class="notes">
+        {% for note in notes %}
+        <li>{{ note.body }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% else %}
+<section class="glass glass--hero">
+    <div class="hero-head">{{ ui.icon('calendar') }}<h2>Сегодня · воскресенье</h2></div>
+    <p class="muted">Уроков нет — выходной.</p>
+</section>
+{% endif %}
+
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('book') }}<h2>Домашнее задание</h2></div>
+    {% if homework %}
+    <ul class="hw-list">
+        {% for item in homework %}
+        <li class="hw-item{% if item.due_date == today_date %} hw-item--today{% endif %}">
+            <span class="hw-subject">{{ item.subject }}</span>
+            <span class="hw-body">{{ item.body }}</span>
+            <span class="hw-due">{{ item.due_date.strftime('%d.%m') }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">На ближайшие дни ничего не задано.</p>
+    {% endif %}
+</section>
+
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('calendar') }}<h2>Вся неделя</h2></div>
+    <div class="week">
+        {% for day, label, lessons in week %}
+        <div class="week-day{% if day == today_weekday %} is-today{% endif %}">
+            <div class="week-day-head">
+                <span class="week-day-name">{{ day_short[day] }}</span>
+                <span class="week-day-full">{{ label }}</span>
+            </div>
+            {% if lessons %}
+            <ul class="week-lessons">
+                {% for lesson in lessons %}
+                <li>
+                    <span class="week-time">{{ lesson.starts_at }}</span>
+                    <span class="week-subject">{{ lesson.subject }}</span>
+                    {% if lesson.room %}<span class="week-room">{{ lesson.room }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted">Нет уроков</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

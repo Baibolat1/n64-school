@@ -1,26 +1,40 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Лента{% endblock %}
 {% block content %}
-<h1>Лента</h1>
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Школа №64</p>
+        <h1>Лента</h1>
+    </div>
+    <a class="chip" href="/teachers">{{ ui.icon('users') }} Учителя</a>
+</div>
 
-<section class="card">
-    <h2>Новый пост</h2>
+{% include "_widgets.html" %}
+
+<section class="glass composer">
+    <div class="composer-head">
+        {{ ui.avatar(student.alias, 'sm', student.avatar_key) }}
+        <h2>Что нового?</h2>
+    </div>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <form method="post" action="/feed/posts" class="stacked-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label for="body">Текст</label>
+        <label class="visually-hidden" for="body">Текст</label>
         <textarea id="body" name="body" rows="4" maxlength="5000"
+                  placeholder="Поделитесь чем-нибудь со школой…"
                   required>{{ body or '' }}</textarea>
 
-        <label class="checkbox">
-            <input type="checkbox" name="is_anonymous" value="true"
-                   {% if is_anonymous %}checked{% endif %}>
-            Опубликовать анонимно
-        </label>
+        <div class="composer-foot">
+            <label class="checkbox">
+                <input type="checkbox" name="is_anonymous" value="true"
+                       {% if is_anonymous %}checked{% endif %}>
+                Анонимно
+            </label>
+            <button type="submit">{{ ui.icon('send') }} Опубликовать</button>
+        </div>
         <p class="hint">При анонимной публикации вместо псевдонима будет показано
             «Аноним».</p>
-
-        <button type="submit">Опубликовать</button>
     </form>
 </section>
 
@@ -30,19 +44,22 @@
             {% include "_post_card.html" %}
         {% endfor %}
     {% else %}
-        <p class="muted">Пока нет постов. Будьте первым!</p>
+        <div class="glass empty">
+            <p>Пока нет постов.</p>
+            <p class="muted">Будьте первым — напишите что-нибудь выше.</p>
+        </div>
     {% endif %}
 </section>
 
 <nav class="pagination" aria-label="Постраничная навигация">
     {% if page > 1 %}
-        <a href="/feed?page={{ page - 1 }}">Позже</a>
+        <a href="/feed?page={{ page - 1 }}">← Позже</a>
     {% else %}
         <span></span>
     {% endif %}
     <span class="muted">Страница {{ page }} из {{ total_pages }}</span>
     {% if page < total_pages %}
-        <a href="/feed?page={{ page + 1 }}">Раньше</a>
+        <a href="/feed?page={{ page + 1 }}">Раньше →</a>
     {% else %}
         <span></span>
     {% endif %}

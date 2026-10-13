@@ -1,7 +1,54 @@
 /* ==========================================================================
-   Components: messages, forms, cards, avatars, tables and the QR surface.
+   Components: glass panels, messages, forms, cards, avatars, tables, the
+   school-day widget, the week grid and the esports cards.
    Loaded last, after theme.css and layout.css.
+
+   One idea runs through the whole file: a panel is a sheet of frosted glass
+   (``.glass``), and everything inside it is either text, a hairline, or a
+   control with a gradient of its own. Nothing is drawn from a colour that is
+   not a token in theme.css.
    ========================================================================== */
+
+/* Panels ------------------------------------------------------------------- */
+
+/* The one card look of the whole site. `isolation: isolate` keeps the inset
+   highlight from bleeding into the backdrop filter, and the top edge gets a
+   brighter line so the sheet reads as lit from above -- which is most of what
+   makes glass look like glass rather than like a grey box. */
+.glass,
+.card,
+.post-card,
+.teacher-card,
+.stat-card,
+.login-card {
+    position: relative;
+    padding: var(--space-5);
+    background: var(--glass);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-glass), var(--glass-highlight);
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+}
+
+/* The hero panel of a page: a touch brighter, with an accent wash in the
+   corner, so the first block of a screen has somewhere for the eye to land. */
+.glass--hero {
+    background:
+        radial-gradient(120% 140% at 0% 0%, rgba(10, 132, 255, .18), transparent 58%),
+        var(--glass);
+}
+
+.hero-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.hero-head .icon {
+    color: var(--accent);
+}
 
 /* Messages ----------------------------------------------------------------- */
 
@@ -9,10 +56,11 @@
 .warning,
 .success {
     padding: var(--space-3) var(--space-4);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
+    margin-top: var(--space-3);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
     border-left: 3px solid currentColor;
-    border-radius: var(--radius-s);
+    border-radius: var(--radius-m);
 }
 
 .error {
@@ -33,18 +81,106 @@
     font-size: var(--step--1);
 }
 
+.muted {
+    font-size: inherit;
+}
+
+/* Page header -------------------------------------------------------------- */
+
+.page-head,
+.page-header,
+.profile-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+/* An identity header (teacher profile, the admin student card) puts the avatar
+   first, so its text block is what needs the room left over. */
+.page-head > div,
+.page-header > div,
+.profile-hero-text {
+    min-width: 0;
+}
+
+.eyebrow {
+    margin-bottom: var(--space-1);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+/* Chips: small glass tags. Used for quick links, filters and hints; a chip may
+   be an <a> or a <span>, so only the shared parts are styled here. */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--step--1);
+    font-weight: 500;
+    color: var(--text);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+a.chip:hover {
+    background: rgba(255, 255, 255, .12);
+    transform: translateY(-1px);
+}
+
+.chip--on {
+    color: #fff;
+    background: linear-gradient(160deg, rgba(10, 132, 255, .8), rgba(109, 94, 252, .75));
+    border-color: transparent;
+}
+
+.chip--ghost {
+    color: var(--text-dim);
+    background: none;
+    border-style: dashed;
+}
+
+.chip--cs2 { color: #ffb86b; }
+.chip--brawl { color: #ff9ad5; }
+
+.profile-hero {
+    justify-content: flex-start;
+    padding: var(--space-5);
+    background:
+        radial-gradient(120% 160% at 0% 0%, rgba(109, 94, 252, .22), transparent 60%),
+        var(--glass);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-glass), var(--glass-highlight);
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+}
+
+.profile-hero-text h1 {
+    font-size: var(--step-3);
+}
+
 /* Forms -------------------------------------------------------------------- */
 
 .stacked-form {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
 }
 
 .stacked-form label {
+    font-size: var(--step--1);
     font-weight: 600;
-    color: var(--text);
+    color: var(--text-dim);
 }
 
 input[type="text"],
@@ -52,12 +188,15 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 textarea {
+    width: 100%;
     padding: var(--space-3) var(--space-4);
     font: inherit;
     color: var(--text);
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-s);
+    background: rgba(6, 10, 20, .55);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 input[type="text"]::placeholder,
@@ -66,6 +205,7 @@ input[type="password"]::placeholder,
 input[type="number"]::placeholder,
 textarea::placeholder {
     color: var(--text-dim);
+    opacity: .8;
 }
 
 input[type="text"]:focus,
@@ -73,45 +213,62 @@ input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
 textarea:focus {
-    border-color: var(--line-strong);
+    outline: none;
+    border-color: rgba(10, 132, 255, .7);
+    box-shadow: 0 0 0 4px var(--accent-soft), inset 0 1px 2px rgba(0, 0, 0, .3);
 }
 
 textarea {
     resize: vertical;
+    line-height: 1.5;
 }
 
+/* Buttons: an iOS-grade control -- a gradient body, an inner highlight along
+   the top edge, a soft coloured shadow underneath. It lifts on hover, presses
+   down on click, and never changes size while doing it. */
 button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
     margin-top: var(--space-3);
     padding: var(--space-3) var(--space-5);
     font: inherit;
     font-weight: 600;
-    color: var(--bg);
-    background: var(--cream);
-    border: 1px solid transparent;
-    border-radius: var(--radius-s);
+    letter-spacing: -0.01em;
+    color: #fff;
+    background: linear-gradient(180deg, #2f9bff, #0a6dff 55%, #4b52e8);
+    border: none;
+    border-radius: var(--radius-m);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .35),
+        0 6px 18px rgba(10, 109, 255, .35);
     cursor: pointer;
-    transition: filter var(--transition-fast), transform var(--transition-fast),
+    transition: transform var(--transition-fast), filter var(--transition-fast),
                 box-shadow var(--transition-fast);
 }
 
-/* A button answers the pointer by lifting a hair and gaining a ring of the
-   accent the page is already built from -- no colour is invented for it, and
-   the shadow is the token every other raised surface uses. */
 button:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
-    box-shadow: 0 0 0 1px var(--cream), var(--shadow-soft);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .4),
+        0 10px 24px rgba(10, 109, 255, .45);
 }
 
-/* ...and settles back while held, so it does not look detached from the page. */
+/* The press is the point of a good button: it goes *down*, and the shadow
+   shrinks with it, so the control feels attached to the finger. */
 button:active {
-    transform: translateY(0);
+    transform: translateY(1px) scale(.985);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3),
+                0 3px 10px rgba(10, 109, 255, .3);
 }
 
 button:disabled {
     cursor: not-allowed;
+    opacity: .5;
     transform: none;
-    box-shadow: none;
+    filter: none;
 }
 
 .checkbox {
@@ -119,25 +276,27 @@ button:disabled {
     align-items: center;
     gap: var(--space-2);
     margin-top: var(--space-1);
+    font-size: var(--step--1);
     font-weight: 400;
+    color: var(--text-dim);
+    cursor: pointer;
 }
 
 .checkbox input {
     margin: 0;
-    /* Tint the native control instead of rebuilding it with appearance: none. */
-    accent-color: var(--cream);
+    accent-color: var(--accent);
 }
 
 .invite-code {
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-4);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: var(--step-1);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.12em;
     text-align: center;
-    color: var(--cream);
-    background: var(--surface-2);
-    border: 1px dashed var(--line-strong);
-    border-radius: var(--radius-s);
+    color: #fff;
+    background: rgba(6, 10, 20, .6);
+    border: 1px dashed var(--glass-line-strong);
+    border-radius: var(--radius-m);
     user-select: all;
 }
 
@@ -155,24 +314,10 @@ button:disabled {
     font-size: var(--step--1);
     font-weight: 400;
     color: var(--text-dim);
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-s);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
     cursor: not-allowed;
-}
-
-/* Page header: the avatar and the page's own heading, side by side. -------- */
-
-.page-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-5);
-}
-
-.page-header h1,
-.page-header h2 {
-    margin: 0;
 }
 
 /* Vertical rhythm ---------------------------------------------------------- */
@@ -182,30 +327,20 @@ button:disabled {
    Excluded from the login screen: its children are absolutely positioned
    against the hero and a margin would nudge the logo and the burger. */
 body:not(.login-page) main > * + * {
-    margin-top: var(--space-5);
-}
-
-/* A heading that introduces a block needs a breath before the content. */
-main section > h1,
-main section > h2 {
-    margin-bottom: var(--space-3);
+    margin-top: var(--space-4);
 }
 
 /* Cards -------------------------------------------------------------------- */
 
-.card {
-    padding: var(--space-4) var(--space-5);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-m);
+.glass > h2,
+.glass > .hero-head h2 {
+    letter-spacing: -0.02em;
 }
 
+/* Post cards: outside the feed (the admin queues, the review cards) they are
+   panels like any other. */
 .post-card {
-    padding: var(--space-4) var(--space-5);
     margin-top: var(--space-4);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-m);
 }
 
 /* Inside the feed a post is not a panel but one entry of a stream: the frame,
@@ -218,8 +353,11 @@ main section > h2 {
     margin-top: 0;
     background: none;
     border: none;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--glass-line);
     border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     animation: post-in var(--transition-slow) both;
 }
 
@@ -241,11 +379,11 @@ main section > h2 {
 @keyframes post-in {
     from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(8px) scale(.995);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -253,7 +391,7 @@ main section > h2 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-1) var(--space-3);
+    gap: var(--space-1) var(--space-2);
     margin-bottom: var(--space-2);
     font-size: var(--step--1);
     color: var(--text-dim);
@@ -261,7 +399,7 @@ main section > h2 {
 
 .post-author {
     font-weight: 600;
-    color: var(--cream);
+    color: var(--text);
 }
 
 /* User text is rendered as plain text; line breaks come from CSS, not <br>. */
@@ -270,11 +408,13 @@ main section > h2 {
     margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    line-height: 1.6;
 }
 
 /* The text sits under the author line rather than against it. */
 .post-body {
-    margin-top: var(--space-2);
+    margin-top: var(--space-1);
+    font-size: var(--step-0);
 }
 
 /* The action row of a post: outline icons with their counters, the way a feed
@@ -284,14 +424,11 @@ main section > h2 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-1) var(--space-5);
+    gap: var(--space-1) var(--space-3);
     margin-top: var(--space-3);
     font-size: var(--step--1);
 }
 
-/* The like is a form and the comment is a link, and the two have to look the
-   same. The button's own chrome -- the global cream block -- is therefore
-   stripped back to what a link looks like. */
 .post-actions form {
     display: flex;
     margin: 0;
@@ -302,43 +439,46 @@ main section > h2 {
     align-items: center;
     gap: var(--space-2);
     margin: 0;
-    padding: var(--space-1) var(--space-2);
+    padding: var(--space-2) var(--space-3);
     font: inherit;
     font-weight: 500;
     color: var(--text-dim);
-    background: none;
+    background: rgba(255, 255, 255, .04);
     border: 1px solid transparent;
-    border-radius: var(--radius-s);
+    border-radius: var(--radius-pill);
     text-decoration: none;
     cursor: pointer;
     transition: color var(--transition-fast), background-color var(--transition-fast),
                 border-color var(--transition-fast), transform var(--transition-fast);
 }
 
-/* `filter` and `box-shadow` are undone here: the global button hover would
-   otherwise brighten an icon and draw a ring around it. */
 .action:hover,
 .action:active {
-    color: var(--cream);
-    background: var(--surface-2);
-    border-color: var(--line);
-    transform: translateY(-1px);
+    color: var(--text);
+    background: rgba(255, 255, 255, .1);
+    border-color: var(--glass-line);
+    transform: translateY(-1px) scale(1);
     filter: none;
     box-shadow: none;
-    text-decoration: none;
 }
 
-/* A liked heart is filled with the accent cream and animated into it. The fill
-   is set from here rather than in the markup because the SVG carries
-   fill="none" as a presentation attribute, which any rule overrides -- so no
-   extra class is needed on the icon itself. */
+.action__count {
+    font-variant-numeric: tabular-nums;
+}
+
+/* A liked heart is filled with the accent and animated into it. The fill is
+   set from here rather than in the markup because the SVG carries fill="none"
+   as a presentation attribute, which any rule overrides -- so no extra class
+   is needed on the icon itself. */
 .action--like.is-liked {
-    color: var(--cream);
+    color: #ff5d8f;
+    background: rgba(255, 93, 143, .12);
 }
 
 .action--like.is-liked .icon {
-    fill: var(--cream);
-    animation: heart-fill var(--transition-slow) ease both;
+    fill: #ff5d8f;
+    stroke: #ff5d8f;
+    animation: heart-fill var(--transition-slow) cubic-bezier(.34, 1.56, .64, 1) both;
 }
 
 /* The fill is what a click produces: the toggle redirects (Post/Redirect/Get),
@@ -347,17 +487,19 @@ main section > h2 {
 @keyframes heart-fill {
     from {
         fill: transparent;
-        transform: scale(0.7);
+        transform: scale(.6);
+    }
+    60% {
+        transform: scale(1.18);
     }
     to {
-        fill: var(--cream);
+        fill: #ff5d8f;
         transform: scale(1);
     }
 }
 
 /* A card's footer row of actions: the comment link, and the complaint link
-   when the content is someone else's. Flex with a gap so a second link appears
-   without any template having to space it. */
+   when the content is someone else's. */
 .post-footer {
     display: flex;
     flex-wrap: wrap;
@@ -365,17 +507,70 @@ main section > h2 {
     gap: var(--space-2) var(--space-4);
     margin: var(--space-3) 0 0;
     padding-top: var(--space-3);
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--glass-line);
     font-size: var(--step--1);
 }
 
+.post-footer a {
+    color: var(--text-dim);
+}
+
+.post-footer a:hover {
+    color: var(--text);
+}
+
+/* Composer (the "new post" form on the feed) ------------------------------- */
+
+.composer-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.composer-head h2 {
+    font-size: var(--step-1);
+    color: var(--text);
+}
+
+.composer-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-top: var(--space-1);
+}
+
+.composer-foot button {
+    margin-top: 0;
+}
+
+.composer .hint {
+    margin-top: var(--space-1);
+}
+
+/* Empty state: says what is missing and what to do about it, in a panel, so a
+   bare feed does not look like a broken page. */
+.empty {
+    text-align: center;
+}
+
+.empty p {
+    font-weight: 500;
+}
+
 /* Comments ----------------------------------------------------------------- */
+
+.comments > h2 {
+    margin-bottom: var(--space-2);
+}
 
 /* A comment continues the post in the same style rather than sitting in a panel
    of its own: same column, same hairline, a little less room. */
 .comment {
     padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--glass-line);
 }
 
 .comment:last-child {
@@ -402,25 +597,27 @@ main section > h2 {
 }
 
 .pagination a {
-    color: var(--cream);
-    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+    transition: background var(--transition-fast), transform var(--transition-fast);
 }
 
 .pagination a:hover {
-    text-decoration: underline;
-}
-
-.back-link {
-    margin-top: 0;
+    background: rgba(255, 255, 255, .12);
+    transform: translateY(-1px);
 }
 
 .back-link a {
-    color: var(--cream);
-    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-dim);
 }
 
 .back-link a:hover {
-    text-decoration: underline;
+    color: var(--text);
 }
 
 /* Data table --------------------------------------------------------------- */
@@ -441,7 +638,7 @@ main section > h2 {
 .data-table td {
     padding: var(--space-2) var(--space-3);
     text-align: left;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--glass-line);
 }
 
 .data-table th {
@@ -455,18 +652,19 @@ main section > h2 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.2rem;
+    height: 2.2rem;
     flex: 0 0 auto;
     font-family: var(--font-body);
     font-size: var(--step--1);
     font-weight: 600;
     line-height: 1;
-    color: var(--cream);
+    color: #fff;
     background: var(--avatar-0);
     border-radius: 50%;
     text-transform: uppercase;
     user-select: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25);
 }
 
 .avatar[data-color="0"] { background: var(--avatar-0); }
@@ -477,14 +675,14 @@ main section > h2 {
 .avatar[data-color="5"] { background: var(--avatar-5); }
 
 .avatar--sm {
-    width: 1.5rem;
-    height: 1.5rem;
-    font-size: var(--step--1);
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.72rem;
 }
 
 .avatar--lg {
-    width: 3rem;
-    height: 3rem;
+    width: 3.25rem;
+    height: 3.25rem;
     font-size: var(--step-1);
 }
 
@@ -492,7 +690,7 @@ main section > h2 {
    (.avatar--sm / .avatar--lg) still set the box, so nothing is repeated here. */
 .avatar--img {
     object-fit: cover;
-    border: 1px solid var(--line);
+    border: 1px solid var(--glass-line-strong);
 }
 
 /* Text for screen readers only: the gallery options carry the picture as pure
@@ -517,12 +715,21 @@ main section > h2 {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
+    margin-top: var(--space-3);
 }
 
 .avatar-option {
     display: inline-flex;
     align-items: center;
+    padding: 3px;
+    border-radius: 50%;
     cursor: pointer;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.avatar-option:hover {
+    background: rgba(255, 255, 255, .08);
+    transform: translateY(-2px);
 }
 
 /* The native control stays in the page for keyboard and screen readers, but is
@@ -537,21 +744,20 @@ main section > h2 {
 }
 
 .avatar-option input:checked + .avatar {
-    outline: 2px solid var(--cream);
-    outline-offset: 2px;
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
 }
 
-/* The hidden input cannot show a focus ring of its own. */
 .avatar-option input:focus-visible + .avatar {
-    outline: 2px solid var(--cream);
-    outline-offset: 2px;
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
 }
 
 /* Line icon: inline SVG that inherits the text colour and sits on the line. - */
 
 .icon {
-    width: 1.25em;
-    height: 1.25em;
+    width: 1.2em;
+    height: 1.2em;
     flex: 0 0 auto;
     fill: none;
     stroke: currentColor;
@@ -559,6 +765,289 @@ main section > h2 {
     stroke-linecap: round;
     stroke-linejoin: round;
     vertical-align: -0.18em;
+}
+
+/* School-day widget (the top block of the feed) ---------------------------- */
+
+.widget {
+    padding: var(--space-4) var(--space-5);
+}
+
+.widget-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    font-weight: 600;
+}
+
+.widget-head .icon {
+    color: var(--accent);
+}
+
+.widget-more {
+    margin-left: auto;
+    font-size: var(--step--1);
+    font-weight: 500;
+    color: var(--text-dim);
+}
+
+.widget-head:hover .widget-more {
+    color: var(--text);
+}
+
+.widget-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.widget-lessons li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    font-size: var(--step--1);
+}
+
+.widget-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.widget-subject {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.widget-room {
+    color: var(--text-dim);
+}
+
+.widget-hw {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--glass-line);
+    font-size: var(--step--1);
+}
+
+.widget-hw-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.widget-hw-item {
+    color: var(--text);
+}
+
+/* Today's schedule: a vertical timeline ------------------------------------ */
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.timeline-item:hover {
+    background: rgba(255, 255, 255, .09);
+    transform: translateX(2px);
+}
+
+/* The time is a fixed column so the subjects line up down the list. */
+.timeline-time {
+    display: flex;
+    flex-direction: column;
+    min-width: 3.6rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+
+.timeline-time small {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-dim);
+}
+
+.timeline-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.timeline-subject {
+    font-weight: 600;
+}
+
+.timeline-room {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}
+
+/* The lesson number, as a chip on the right edge. */
+.timeline-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+}
+
+/* Day notes: replacements and "bring your notebook" lines. */
+.notes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.notes li {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--step--1);
+    color: var(--warning);
+    background: rgba(255, 209, 102, .08);
+    border-left: 3px solid var(--warning);
+    border-radius: var(--radius-s);
+}
+
+/* Homework list ------------------------------------------------------------ */
+
+.hw-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.hw-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+}
+
+/* Due today is the one row that has to catch the eye. */
+.hw-item--today {
+    background: rgba(255, 209, 102, .1);
+    border-color: rgba(255, 209, 102, .35);
+}
+
+.hw-subject {
+    font-weight: 600;
+}
+
+.hw-body {
+    grid-column: 1 / -1;
+    color: var(--text);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.hw-due {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+/* The whole week grid ------------------------------------------------------ */
+
+.week {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: var(--space-3);
+}
+
+.week-day {
+    padding: var(--space-3);
+    background: rgba(255, 255, 255, .035);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+}
+
+.week-day.is-today {
+    border-color: rgba(10, 132, 255, .55);
+    box-shadow: 0 0 0 1px rgba(10, 132, 255, .25), var(--glass-highlight);
+}
+
+.week-day-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.week-day-name {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.week-day-full {
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}
+
+.week-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--step--1);
+}
+
+.week-lessons li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.week-time {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+}
+
+.week-subject {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.week-room {
+    color: var(--text-dim);
 }
 
 /* Teacher list, reviews and the rating control ----------------------------- */
@@ -580,16 +1069,12 @@ main section > h2 {
     gap: var(--space-4);
     padding: var(--space-4) var(--space-5);
     color: var(--text);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-m);
-    text-decoration: none;
-    transition: border-color var(--transition-fast);
+    transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 .teacher-card:hover {
-    border-color: var(--line-strong);
-    text-decoration: none;
+    background: var(--glass-strong);
+    transform: translateY(-2px);
 }
 
 .teacher-card-main {
@@ -600,9 +1085,9 @@ main section > h2 {
 }
 
 .teacher-name {
-    font-family: var(--font-display);
     font-size: var(--step-1);
-    color: var(--cream);
+    font-weight: 600;
+    color: var(--text);
 }
 
 .teacher-card-score {
@@ -611,18 +1096,28 @@ main section > h2 {
     align-items: flex-end;
     gap: var(--space-1);
     text-align: right;
+    font-size: var(--step--1);
 }
 
 .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    padding: var(--space-1) var(--space-3);
     font-family: var(--font-display);
-    font-size: var(--step-2);
+    font-size: var(--step-1);
+    font-weight: 700;
     line-height: 1;
-    color: var(--cream);
+    color: #fff;
+    background: linear-gradient(160deg, rgba(10, 132, 255, .85), rgba(109, 94, 252, .8));
+    border-radius: var(--radius-pill);
+    box-shadow: var(--glass-highlight);
 }
 
 .teacher-overall {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-3);
     margin-bottom: var(--space-4);
 }
@@ -632,8 +1127,6 @@ main section > h2 {
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-4);
     margin: 0 0 var(--space-3);
-    padding: 0;
-    list-style: none;
     font-size: var(--step--1);
     color: var(--text-dim);
 }
@@ -646,7 +1139,7 @@ main section > h2 {
 
 .review-score-value {
     font-weight: 600;
-    color: var(--cream);
+    color: var(--text);
 }
 
 /* Rating: one radio per point of the criterion's own scale. The chosen state
@@ -660,8 +1153,9 @@ main section > h2 {
 
 .rating-field legend {
     padding: 0;
+    font-size: var(--step--1);
     font-weight: 600;
-    color: var(--text);
+    color: var(--text-dim);
 }
 
 .rating {
@@ -689,31 +1183,34 @@ main section > h2 {
 }
 
 .rating-option span {
-    min-width: 2.25rem;
+    min-width: 2.5rem;
     padding: var(--space-2) var(--space-3);
     font-size: var(--step--1);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: center;
     color: var(--text-dim);
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-s);
-    transition: color var(--transition-fast), border-color var(--transition-fast);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    transition: color var(--transition-fast), background var(--transition-fast),
+                transform var(--transition-fast);
 }
 
 .rating-option:hover span {
-    border-color: var(--line-strong);
+    color: var(--text);
+    transform: translateY(-1px);
 }
 
 .rating-option input:checked + span {
-    color: var(--bg);
-    background: var(--cream);
-    border-color: var(--cream);
+    color: #fff;
+    background: linear-gradient(180deg, #2f9bff, #0a6dff);
+    border-color: transparent;
+    box-shadow: var(--glass-highlight), 0 4px 12px rgba(10, 109, 255, .4);
 }
 
-/* The hidden input cannot show a focus ring of its own. */
 .rating-option input:focus-visible + span {
-    outline: 2px solid var(--cream);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
@@ -722,16 +1219,17 @@ main section > h2 {
 .qr-image {
     display: block;
     margin: var(--space-4) auto;
+    padding: var(--space-2);
     background: #fff;               /* QR must stay on white to be scannable */
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-s);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-raised);
 }
 
 #scan-frame {
     margin-top: var(--space-4);
     overflow: hidden;
     background: #000;
-    border-radius: var(--radius-s);
+    border-radius: var(--radius-m);
 }
 
 #scan-video {
@@ -756,22 +1254,19 @@ main section > h2 {
     gap: var(--space-1);
     padding: var(--space-4);
     color: var(--text);
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-m);
-    text-decoration: none;
-    transition: border-color var(--transition-fast);
+    transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
 a.stat-card:hover {
-    border-color: var(--line-strong);
-    text-decoration: none;
+    background: var(--glass-strong);
+    transform: translateY(-2px);
 }
 
 /* The number is what the eye lands on; a live queue reads in the accent tone. */
 .stat-value {
     font-family: var(--font-display);
-    font-size: var(--step-2);
+    font-size: var(--step-3);
+    font-weight: 700;
     line-height: 1;
     color: var(--cream);
 }
@@ -786,20 +1281,306 @@ a.stat-card:hover {
     color: var(--text-dim);
 }
 
+/* Esports ------------------------------------------------------------------ */
+
+.game-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.tourney-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-3);
+}
+
+.tourney {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5);
+}
+
+/* Each game gets its own wash, so a grid of tournaments is readable at a
+   glance without reading a single title. */
+.tourney--cs2 {
+    background:
+        radial-gradient(130% 120% at 100% 0%, rgba(255, 184, 107, .18), transparent 60%),
+        var(--glass);
+}
+
+.tourney--brawl {
+    background:
+        radial-gradient(130% 120% at 100% 0%, rgba(255, 154, 213, .18), transparent 60%),
+        var(--glass);
+}
+
+.tourney-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    font-size: var(--step--1);
+}
+
+.tourney-game {
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+}
+
+.status {
+    padding: var(--space-1) var(--space-3);
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-line);
+}
+
+.status--upcoming {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: rgba(10, 132, 255, .35);
+}
+
+.status--live {
+    color: #fff;
+    background: linear-gradient(120deg, #ff5d5d, #ff8a3d);
+    border-color: transparent;
+    animation: live-pulse 2s ease-in-out infinite;
+}
+
+.status--finished {
+    color: var(--text-dim);
+}
+
+@keyframes live-pulse {
+    50% {
+        filter: brightness(1.15);
+    }
+}
+
+.tourney-title {
+    font-size: var(--step-1);
+    font-weight: 600;
+}
+
+.tourney-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}
+
+.tourney-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.tourney-desc {
+    font-size: var(--step--1);
+    color: var(--text-dim);
+    white-space: pre-wrap;
+}
+
+.roster {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--glass-line);
+}
+
+.roster-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    font-size: var(--step--1);
+}
+
+.roster-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* Badge chip: a tournament award. The modifier class comes from the award code
+   in the database, so a new award needs a colour here and nothing else. */
+.medal {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-3);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.medal--mvp {
+    color: #ffe27a;
+    background: rgba(255, 226, 122, .14);
+    border-color: rgba(255, 226, 122, .35);
+}
+
+.medal--captain {
+    color: #9ec5ff;
+    background: rgba(158, 197, 255, .14);
+    border-color: rgba(158, 197, 255, .35);
+}
+
+.medal--winner {
+    color: #7ff0b0;
+    background: rgba(127, 240, 176, .14);
+    border-color: rgba(127, 240, 176, .35);
+}
+
+/* Badges on the profile ---------------------------------------------------- */
+
+.badge-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.badge-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+}
+
+.badge-card-text {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--step--1);
+}
+
+/* Section links on the profile: a grid of glass tiles, the same control reachable
+   from the bottom bar of a phone and from the top bar of a laptop. */
+.link-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-2);
+}
+
+.link-grid a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    font-size: var(--step--1);
+    font-weight: 500;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.link-grid a:hover {
+    background: rgba(255, 255, 255, .11);
+    transform: translateY(-2px);
+}
+
+.link-grid .icon {
+    color: var(--accent);
+}
+
+/* Assistant ---------------------------------------------------------------- */
+
+.answer-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.answer-head .icon {
+    color: var(--accent-2);
+}
+
+/* The source line is not decoration: an answer from the model must not be read
+   as an extract from the school database. */
+.answer-source {
+    margin-left: auto;
+    padding: var(--space-1) var(--space-3);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+}
+
+.answer-body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+    animation: answer-in var(--transition-slow) both;
+}
+
+@keyframes answer-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.suggest {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+
 /* Motion ------------------------------------------------------------------- */
 
 /* Everything above is decoration, and a reader who has told the system they do
    not want to be moved gets none of it: the feed is simply already there. The
    colour changes stay, so a liked heart still looks liked. */
 @media (prefers-reduced-motion: reduce) {
+    body::before,
     .posts .post-card,
-    .action--like.is-liked .icon {
+    .action--like.is-liked .icon,
+    .answer-body,
+    .status--live {
         animation: none;
     }
 
     button:hover,
+    button:active,
     .action:hover,
-    .action:active {
+    .action:active,
+    .pagination a:hover,
+    .rating-option:hover span,
+    .link-grid a:hover,
+    .teacher-card:hover,
+    a.stat-card:hover,
+    .timeline-item:hover,
+    .avatar-option:hover {
         transform: none;
     }
 }

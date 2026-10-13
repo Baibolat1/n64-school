@@ -25,6 +25,7 @@ from app.repositories import students as students_repo
 from app.schemas.feed import CommentCreate, PostCreate
 from app.services import feed as feed_service
 from app.services import likes as likes_service
+from app.services import school as school_service
 
 # ``require_csrf`` is attached to the whole router: it is a no-op for safe
 # methods, and every state-changing route here is a form POST.
@@ -135,6 +136,10 @@ def _render_feed(
             # Echo the submitted text/checkbox back on error.
             "body": body,
             "is_anonymous": is_anonymous,
+            # The school-day widget on top of the feed: today's lessons and the
+            # nearest homework, or a dict that renders to nothing.
+            "day": school_service.day_summary(db, student.class_name),
+            "day_labels": school_service.DAY_LABELS,
         },
         status_code=status_code,
     )

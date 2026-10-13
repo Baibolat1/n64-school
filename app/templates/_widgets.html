@@ -1,0 +1,40 @@
+{# Виджет школьного дня на главной (ленте): уроки сегодня и ближайшая домашка.
+
+   Он не обязателен: если класс не указан или данных нет, виджет молчит и не
+   оставляет пустой рамки. Всё, что он читает, приходит из
+   ``app.services.school.day_summary`` -- шаблон не ходит ни в какие таблицы
+   сам и не знает про расписание ничего, кроме того, что видит здесь. #}
+{% import "_macros.html" as ui %}
+{% if day.class_name and (day.lessons or day.homework) %}
+<section class="glass widget">
+    <a class="widget-head" href="/schedule">
+        {{ ui.icon('calendar') }}
+        <span>Сегодня{% if day.weekday %} · {{ day_labels[day.weekday] }}{% endif %}</span>
+        <span class="widget-more">Расписание →</span>
+    </a>
+
+    {% if day.lessons %}
+    <ul class="widget-lessons">
+        {% for lesson in day.lessons[:4] %}
+        <li>
+            <span class="widget-time">{{ lesson.starts_at }}</span>
+            <span class="widget-subject">{{ lesson.subject }}</span>
+            {% if lesson.room %}<span class="widget-room">{{ lesson.room }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Сегодня уроков нет.</p>
+    {% endif %}
+
+    {% if day.homework %}
+    <div class="widget-hw">
+        <span class="widget-hw-title">{{ ui.icon('book') }} Домашка</span>
+        <span class="widget-hw-item">{{ day.homework[0].subject }} к {{ day.homework[0].due_date.strftime('%d.%m') }}</span>
+        {% if day.homework|length > 1 %}
+        <span class="muted">и ещё {{ day.homework|length - 1 }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}

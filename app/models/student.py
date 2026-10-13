@@ -52,3 +52,8 @@ class Student(Base):
     # otherwise the value is a key of an image from the built-in gallery (there
     # are no file uploads, see app.core.avatars).
     avatar_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # "9А", "10Б" -- which class the student is in. It selects the row of the
+    # schedule and the homework they see, and it is personal data (the PII
+    # filter treats a class number as soft-PII in *public text*), so it is
+    # shown on the student's own profile and never next to their posts.
+    class_name: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)

@@ -33,6 +33,18 @@ def create_post(
     return post
 
 
+def get_post_by_body(db: Session, body: str) -> Post | None:
+    """Return a post whose text is exactly ``body``, or None.
+
+    Only the demo seeder asks this: it has no key of its own to match on, so it
+    recognises the posts it wrote by their text (the demo texts are unique). It
+    looks at every status, so re-seeding after a post was hidden does not insert
+    a double.
+    """
+    stmt = select(Post).where(Post.body == body)
+    return db.execute(stmt).scalars().first()
+
+
 def get_post(db: Session, post_id: int) -> Post | None:
     """Return the post with ``post_id`` regardless of status, or None.
 

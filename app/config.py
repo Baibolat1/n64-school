@@ -99,6 +99,27 @@ class Settings(BaseSettings):
     # only has to absorb edits, not a conversation.
     RATE_LIMIT_REVIEWS: int = 20
     RATE_LIMIT_REVIEWS_WINDOW_SECONDS: int = 3600
+    # Questions to the assistant. A question that reaches the model costs real
+    # money, so the budget is tighter than the posting one; answers served from
+    # the school database are counted too, to keep the counter simple.
+    RATE_LIMIT_ASSISTANT: int = 30
+    RATE_LIMIT_ASSISTANT_WINDOW_SECONDS: int = 3600
+
+    # --- Assistant (hybrid: school database first, model second) --------------
+    # Both keys are optional and both empty by default: without a key the
+    # assistant answers from the school database only and sends nothing
+    # anywhere. The key is read here and never logged. When both are set, the
+    # Anthropic one wins.
+    ANTHROPIC_API_KEY: str = ""
+    # Model used for the free-form answers. Claude Opus 5.5 is the current
+    # default; see docs/PLAN.md if it ever needs to change.
+    ANTHROPIC_MODEL: str = "claude-opus-5-5"
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_MODEL: str = "deepseek-chat"
+    # Upper bound on a generated answer, and how long to wait for it before
+    # falling back to the school-database refusal text.
+    ASSISTANT_MAX_TOKENS: int = 1024
+    ASSISTANT_TIMEOUT_SECONDS: float = 30.0
 
     # Login attempts allowed per client IP before further attempts are refused
     # with 429 (see app.services.login_throttle). The admin form is strict: it

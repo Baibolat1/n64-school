@@ -16,8 +16,10 @@ from app.core.deps import (
 from app.core.templates import templates
 from app.db.base import get_db
 from app.models.student import Student
+from app.repositories import tournaments as tournaments_repo
 from app.services import aliases as aliases_service
 from app.services import avatars as avatars_service
+from app.services import esports as esports_service
 from app.services import invites as invites_service
 from app.services import login_throttle
 from app.services import registration
@@ -174,11 +176,19 @@ def _avatar_error_message(result: avatars_service.AvatarChangeResult) -> str:
 def _render_me(
     request: Request,
     student: Student,
+    db: Session,
     *,
     error: str | None = None,
     alias_value: str | None = None,
 ) -> Response:
     can_change, retry_at = aliases_service.can_change_alias(student)
+    # The profile shows the esports awards the student has won: two batched
+    # reads (their badges, then the tournaments those badges point at), not one
+    # query per badge.
+    badges = tournaments_repo.list_badges_for_student(db, student.id)
+    badge_tournaments = tournaments_repo.tournaments_by_id(
+        db, [badge.tournament_id for badge in badges]
+    )
     return templates.TemplateResponse(
         request,
         "me.html",
@@ -188,6 +198,10 @@ def _render_me(
             "retry_at": retry_at,
             "cooldown_days": settings.ALIAS_CHANGE_COOLDOWN_DAYS,
             "error": error,
+            "badges": badges,
+            "badge_tournaments": badge_tournaments,
+            "badge_label": esports_service.badge_label,
+            "game_label": esports_service.game_label,
             # Echo the submitted text back on error so it need not be retyped.
             "alias_value": (
                 alias_value if alias_value is not None else student.alias
@@ -200,8 +214,9 @@ def _render_me(
 def me(
     request: Request,
     student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
 ) -> Response:
-    return _render_me(request, student)
+    return _render_me(request, student, db)
 
 
 @router.post("/me/alias", response_class=HTMLResponse)
@@ -218,6 +233,7 @@ def change_alias(
     return _render_me(
         request,
         student,
+        db,
         error=_alias_error_message(result),
         alias_value=result.alias,
     )
@@ -234,4 +250,4 @@ def change_avatar(
     if result.ok:
         # Post/Redirect/Get: a reload will not resubmit the form.
         return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_me(request, student, error=_avatar_error_message(result))
+    return _render_me(request, student, db, error=_avatar_error_message(result))

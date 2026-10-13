@@ -1,8 +1,12 @@
-{# Bottom mobile navigation: shown on phones, hidden on wide screens by
-   layout.css. Rendered from base.html only inside `{% if student %}`.
-   The active item is derived from request.url.path (Starlette puts request
-   into the template context and {% include %} inherits it): /feed is also
-   active on /feed/posts/{id}, so match it by prefix. #}
+{# Нижняя мобильная навигация: на телефонах, на широких экранах скрыта через
+   layout.css. Рендерится из base.html только внутри `{% if student %}`.
+
+   Активный пункт выводится из request.url.path (Starlette кладёт request в
+   контекст шаблона, а {% include %} его наследует): /feed активен и на
+   /feed/posts/{id}, поэтому сверяем по префиксу.
+
+   Пунктов ровно пять -- больше на телефоне не помещается в палец. QR-сканер
+   уехал в верхнюю строку профиля: он нужен раз в год, а не каждый день. #}
 {% import "_macros.html" as ui %}
 {% set path = request.url.path %}
 <nav class="bottomnav">
@@ -10,16 +14,20 @@
         {{ ui.icon('feed') }}
         <span>Лента</span>
     </a>
-    <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>
-        {{ ui.icon('users') }}
-        <span>Учителя</span>
+    <a href="/schedule"{% if path == '/schedule' %} class="is-active"{% endif %}>
+        {{ ui.icon('calendar') }}
+        <span>Уроки</span>
+    </a>
+    <a href="/assistant"{% if path == '/assistant' %} class="is-active"{% endif %}>
+        {{ ui.icon('sparkles') }}
+        <span>Ассистент</span>
+    </a>
+    <a href="/esports"{% if path == '/esports' %} class="is-active"{% endif %}>
+        {{ ui.icon('gamepad') }}
+        <span>Игры</span>
     </a>
     <a href="/me"{% if path == '/me' %} class="is-active"{% endif %}>
         {{ ui.icon('user') }}
         <span>Профиль</span>
-    </a>
-    <a href="/scan"{% if path == '/scan' %} class="is-active"{% endif %}>
-        {{ ui.icon('qr') }}
-        <span>QR-сканер</span>
     </a>
 </nav>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Ассистент{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Помощник</p>
+        <h1>Ассистент</h1>
+    </div>
+    <span class="chip{{ ' chip--on' if llm_ready else '' }}">
+        {{ ui.icon('sparkles') }}
+        {{ 'Модель подключена' if llm_ready else 'Только база школы' }}
+    </span>
+</div>
+
+<section class="glass">
+    <p class="hint">
+        Сначала я ищу ответ в базе школы — расписание, домашнее задание, учителя
+        и турниры. Это бесплатно и мгновенно.
+        {% if llm_ready %}
+        Если в базе ответа нет, тот же вопрос уйдёт модели.
+        {% else %}
+        Свободные вопросы я пока не умею: ключ модели не настроен.
+        {% endif %}
+        Личные данные в вопрос лучше не писать.
+    </p>
+
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+    <form method="post" action="/assistant" class="stacked-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="question">Ваш вопрос</label>
+        <textarea id="question" name="question" rows="3"
+                  maxlength="{{ max_question_length }}"
+                  placeholder="Например: что задали по алгебре на завтра?"
+                  required>{{ question or '' }}</textarea>
+        <button type="submit">{{ ui.icon('send') }} Спросить</button>
+    </form>
+
+    <div class="suggest">
+        {% for sample in [
+            'Расписание на сегодня',
+            'Что задали по алгебре',
+            'Какие турниры по CS2',
+            'Что ты умеешь',
+        ] %}
+        <span class="chip chip--ghost">{{ sample }}</span>
+        {% endfor %}
+    </div>
+</section>
+
+{% if answer %}
+<article class="glass answer" id="answer">
+    <header class="answer-head">
+        {{ ui.icon('sparkles') }}
+        <h2>Ответ</h2>
+        <span class="answer-source">
+            {% if answer_source == 'llm' %}модель{% elif answer_source == 'db' %}база школы{% else %}подсказка{% endif %}
+        </span>
+    </header>
+    <p class="answer-body">{{ answer }}</p>
+</article>
+{% endif %}
+{% endblock %}

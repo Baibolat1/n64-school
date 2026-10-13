@@ -2,18 +2,53 @@
 {% import "_macros.html" as ui %}
 {% block title %}Мой профиль{% endblock %}
 {% block content %}
-<div class="page-header">
+<header class="profile-hero">
     {{ ui.avatar(student.alias, 'lg', student.avatar_key) }}
-    <h1>{{ student.alias }}</h1>
-</div>
+    <div class="profile-hero-text">
+        <p class="eyebrow">Профиль</p>
+        <h1>{{ student.alias }}</h1>
+        <p class="muted">
+            {% if student.class_name %}Класс {{ student.class_name }} · {% endif %}анонимно для остальных
+        </p>
+    </div>
+</header>
 
-{# One refusal slot for the whole page: both forms below redirect here on
-   success and re-render here on refusal, so the message belongs to neither
-   section in particular. #}
+{# Один слот отказа на всю страницу: обе формы ниже возвращаются сюда и на
+   успехе, и на отказе, поэтому сообщение не принадлежит ни одной из секций. #}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
-<section class="card">
-    <h2>Сменить псевдоним</h2>
+{% if badges %}
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('trophy') }}<h2>Награды</h2></div>
+    <ul class="badge-list">
+        {% for badge in badges %}
+        {% set tournament = badge_tournaments.get(badge.tournament_id) %}
+        <li class="badge-card">
+            {{ ui.medal(badge.code, badge_label(badge.code)) }}
+            <span class="badge-card-text">
+                <span>{{ tournament.title if tournament else 'Турнир' }}</span>
+                <span class="muted">{{ game_label(tournament.game) if tournament else '' }}</span>
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('feed') }}<h2>Разделы</h2></div>
+    <nav class="link-grid">
+        <a href="/schedule">{{ ui.icon('calendar') }} <span>Расписание</span></a>
+        <a href="/assistant">{{ ui.icon('sparkles') }} <span>Ассистент</span></a>
+        <a href="/esports">{{ ui.icon('gamepad') }} <span>Турниры</span></a>
+        <a href="/teachers">{{ ui.icon('users') }} <span>Учителя</span></a>
+        <a href="/scan">{{ ui.icon('qr') }} <span>QR-сканер</span></a>
+        <a href="/feed">{{ ui.icon('feed') }} <span>Лента</span></a>
+    </nav>
+</section>
+
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('user') }}<h2>Сменить псевдоним</h2></div>
     {% if can_change %}
     <form method="post" action="/me/alias" class="stacked-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -29,8 +64,8 @@
     {% endif %}
 </section>
 
-<section class="card">
-    <h2>Аватарка</h2>
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('user') }}<h2>Аватарка</h2></div>
     <p class="hint">Картинка показывается рядом с псевдонимом в ленте, на странице поста
         и в отзывах. Менять её можно сколько угодно раз. Под анонимными записями
         картинка не показывается: там всегда кружок.</p>
@@ -55,8 +90,8 @@
     </form>
 </section>
 
-<section class="card">
-    <h2>Выход</h2>
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('logout') }}<h2>Выход</h2></div>
     <p class="hint">Вы остаётесь в системе на этом устройстве, пока не выйдете сами.</p>
     <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

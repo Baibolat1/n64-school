@@ -20,6 +20,16 @@
     'check': '<path d="M20 6 9 17l-5-5"/>',
     'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
     'comment': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    'calendar': '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+    'book': '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+    'sparkles': '<path d="M12 3v4"/><path d="M12 17v4"/><path d="m5.6 5.6 2.8 2.8"/><path d="m15.6 15.6 2.8 2.8"/><path d="M3 12h4"/><path d="M17 12h4"/><path d="m5.6 18.4 2.8-2.8"/><path d="m15.6 8.4 2.8-2.8"/>',
+    'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    'gamepad': '<path d="M6 12h4"/><path d="M8 10v4"/><path d="M15 13h.01"/><path d="M18 11h.01"/><rect width="20" height="12" x="2" y="6" rx="6"/>',
+    'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    'pin': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    'send': '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    'medal': '<path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/>',
+    'flame': '<path d="M12 2c1 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1.5.5-2.5 1-3-2 1.5-3 3.5-3 6a6 6 0 0 0 12 0c0-4.5-4-6-6-11Z"/>',
 } -%}
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
 {%- endmacro %}
@@ -73,6 +83,14 @@
     <a class="action" href="{{ report_url }}">Пожаловаться</a>
     {%- endif %}
 </div>
+{%- endmacro %}
+
+{# Badge chip: a tournament award (MVP, captain, ...). The code is a data value
+   from the database, so it becomes a modifier class for the colour and never a
+   branch in the template -- a new award appears on the page without a new
+   branch, just a new rule in components.css. #}
+{% macro medal(code, label) %}
+<span class="medal medal--{{ code }}">{{ icon('medal') }}<span>{{ label }}</span></span>
 {%- endmacro %}
 
 {# Average score, formatted in one place so every page shows the same thing: one

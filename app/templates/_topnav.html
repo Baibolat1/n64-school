@@ -1,18 +1,34 @@
-{# Top navigation: shown on wide screens (tablet/laptop and up), hidden on
-   phones by layout.css. Rendered from base.html only inside `{% if student %}`.
-   There is deliberately no logout here: the exit lives on the profile page
-   only, so a student cannot sign out by mis-tapping a menu item.
-   The items mirror _bottomnav.html one for one -- wider screens get the same
-   set, just laid out in a row. #}
+{# Верхняя навигация: на широких экранах (планшет/ноутбук и выше), на
+   телефонах скрыта через layout.css. Рендерится из base.html только внутри
+   `{% if student %}`.
+
+   Выхода здесь намеренно нет: выход живёт только в профиле, чтобы ученик не
+   вылетел из аккаунта от промаха по меню.
+
+   Набор пунктов совпадает с нижним меню один в один -- на широком экране те
+   же разделы, просто в строку. Иконка стоит перед подписью, чтобы строка
+   читалась как вкладки, а не как абзац ссылок. #}
+{% import "_macros.html" as ui %}
 {% set path = request.url.path %}
 <nav class="topnav">
     <div class="topnav-inner">
-        <span class="topnav-alias">{{ student.alias }}</span>
+        <a class="topnav-brand" href="/feed">
+            <span class="topnav-mark">64</span>
+            <span class="topnav-name">n64hub</span>
+        </a>
         <span class="topnav-links">
-            <a href="/feed"{% if path == '/feed' or path.startswith('/feed/') %} class="is-active"{% endif %}>Лента</a>
-            <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>Учителя</a>
-            <a href="/me"{% if path == '/me' %} class="is-active"{% endif %}>Профиль</a>
-            <a href="/scan"{% if path == '/scan' %} class="is-active"{% endif %}>QR-сканер</a>
+            <a href="/feed"{% if path == '/feed' or path.startswith('/feed/') %} class="is-active"{% endif %}>{{ ui.icon('feed') }}<span>Лента</span></a>
+            <a href="/schedule"{% if path == '/schedule' %} class="is-active"{% endif %}>{{ ui.icon('calendar') }}<span>Расписание</span></a>
+            <a href="/assistant"{% if path == '/assistant' %} class="is-active"{% endif %}>{{ ui.icon('sparkles') }}<span>Ассистент</span></a>
+            <a href="/esports"{% if path == '/esports' %} class="is-active"{% endif %}>{{ ui.icon('gamepad') }}<span>Игры</span></a>
+            <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>{{ ui.icon('users') }}<span>Учителя</span></a>
+        </span>
+        <span class="topnav-user">
+            <a class="topnav-scan" href="/scan" title="QR-сканер" aria-label="QR-сканер">{{ ui.icon('qr') }}</a>
+            <a class="topnav-profile" href="/me">
+                {{ ui.avatar(student.alias, 'sm', student.avatar_key) }}
+                <span class="topnav-alias">{{ student.alias }}</span>
+            </a>
         </span>
     </div>
 </nav>

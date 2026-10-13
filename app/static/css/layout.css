@@ -1,7 +1,36 @@
 /* ==========================================================================
-   Layout: page column, top navigation, burger menu and the mobile bottom
-   bar. Loaded after theme.css and before components.css.
+   Layout: the background lights, the page column, the glass navigation bars
+   and the mobile bottom bar. Loaded after theme.css and before components.css.
    ========================================================================== */
+
+/* Background lights -------------------------------------------------------- */
+
+/* Three soft coloured lights fixed behind everything. They are what the glass
+   panels are frosted *over*: without something behind it, a blur is invisible
+   and the panels read as flat grey boxes. Purely decorative, pointer-events
+   off, and painted with gradients so no image file is needed (the CSP allows
+   only /static anyway). */
+body::before {
+    content: "";
+    position: fixed;
+    inset: -20vmax;
+    z-index: -1;
+    background:
+        radial-gradient(38vmax 38vmax at 12% 8%, rgba(10, 132, 255, .28), transparent 62%),
+        radial-gradient(34vmax 34vmax at 88% 4%, rgba(109, 94, 252, .26), transparent 60%),
+        radial-gradient(44vmax 44vmax at 70% 96%, rgba(20, 184, 166, .18), transparent 64%),
+        radial-gradient(30vmax 30vmax at 20% 78%, rgba(240, 171, 252, .14), transparent 62%);
+    animation: lights-drift 42s ease-in-out infinite alternate;
+}
+
+@keyframes lights-drift {
+    from {
+        transform: translate3d(-1.5%, -1%, 0) scale(1);
+    }
+    to {
+        transform: translate3d(2%, 2.5%, 0) scale(1.08);
+    }
+}
 
 /* Page column -------------------------------------------------------------- */
 
@@ -14,50 +43,136 @@
 
 /* Top navigation ----------------------------------------------------------- */
 
+/* A sticky bar of frosted glass, translucent enough to show the lights sliding
+   under it. `saturate` is what keeps a blurred colour from turning grey. */
 .topnav {
-    background: var(--bg-deep);
-    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--glass-strong);
+    border-bottom: 1px solid var(--glass-line);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
 }
 
 .topnav-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-4);
-    max-width: 52rem;               /* a little wider than the content column */
+    max-width: 64rem;
     margin: 0 auto;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-4);
     font-size: var(--step--1);
+}
+
+.topnav-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    color: var(--cream);
+}
+
+.topnav-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    background: linear-gradient(150deg, var(--accent), var(--accent-2));
+    border-radius: 9px;
+    box-shadow: var(--glass-highlight), 0 4px 14px rgba(10, 132, 255, .35);
+}
+
+.topnav-name {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    letter-spacing: 0.04em;
+}
+
+/* The links read as one pill of glass: the current section is a filled chip
+   inside it, the way a segmented control reads on iOS. */
+.topnav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: auto;
+    padding: var(--space-1);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+}
+
+.topnav-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    color: var(--text-dim);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.topnav-links a:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, .06);
+}
+
+.topnav-links .is-active {
+    color: #fff;
+    background: linear-gradient(160deg, rgba(10, 132, 255, .9), rgba(109, 94, 252, .85));
+    box-shadow: var(--glass-highlight), 0 4px 14px rgba(10, 132, 255, .3);
+}
+
+.topnav-user {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.topnav-scan {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.topnav-scan:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, .1);
+}
+
+.topnav-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+}
+
+.topnav-profile:hover {
+    background: rgba(255, 255, 255, .09);
 }
 
 .topnav-alias {
     font-weight: 600;
-    color: var(--text-dim);
-    letter-spacing: 0.02em;
-}
-
-.topnav-links {
-    display: flex;
-    align-items: center;
-    gap: var(--space-5);
-}
-
-.topnav-links a {
-    color: var(--cream);
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-.topnav-links a:hover {
-    text-decoration: underline;
-}
-
-/* In the top bar the current section is the only one underlined, so plain
-   hover can keep its underline without the two states blurring together. */
-.topnav .is-active {
-    text-decoration: underline;
-    text-underline-offset: 0.35em;
-    text-decoration-thickness: 1px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
 }
 
 .inline-form {
@@ -66,25 +181,26 @@
 }
 
 .link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
     margin: 0;
-    padding: 0;
+    padding: var(--space-2) var(--space-3);
     font: inherit;
-    font-weight: 400;
-    color: var(--cream);
-    background: none;
-    border: none;
-    border-radius: 0;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
     cursor: pointer;
+    transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-/* A button that is really a link answers like one: the lift, the ring and the
-   brightening that every other button gets on hover are undone here, or the
-   nav would jump about under the pointer. */
 .link-button:hover {
-    background: none;
-    text-decoration: underline;
-    transform: none;
+    color: var(--text);
+    background: rgba(255, 255, 255, .1);
     box-shadow: none;
+    transform: none;
     filter: none;
 }
 
@@ -100,13 +216,13 @@
     justify-content: center;
     width: 2.5rem;
     height: 2.5rem;
-    color: var(--cream);
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-s);
+    color: var(--text);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
     cursor: pointer;
     list-style: none;
-    transition: border-color var(--transition-fast);
+    transition: background var(--transition-fast);
 }
 
 .burger > summary::-webkit-details-marker {
@@ -119,7 +235,7 @@
 
 .burger[open] > summary,
 .burger > summary:hover {
-    border-color: var(--line-strong);
+    background: rgba(255, 255, 255, .1);
 }
 
 .burger-panel {
@@ -129,41 +245,55 @@
     z-index: 20;
     min-width: 12rem;
     padding: var(--space-2);
-    background: var(--surface-2);
-    border: 1px solid var(--line);
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-line);
     border-radius: var(--radius-m);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
 }
 
 .burger-panel a,
 .burger-panel .link-button {
     display: block;
+    width: 100%;
     padding: var(--space-2) var(--space-3);
-    color: var(--cream);
+    color: var(--text);
+    background: none;
+    border: none;
     border-radius: var(--radius-s);
+    text-align: left;
 }
 
 .burger-panel a:hover,
 .burger-panel .link-button:hover {
-    background: var(--surface-1);
-    text-decoration: none;
+    background: rgba(255, 255, 255, .08);
 }
 
 /* Bottom mobile bar -------------------------------------------------------- */
 
+/* A floating pill of glass, inset from the screen edges the way a modern iOS
+   tab bar is: it reads as a control sitting on top of the page rather than a
+   slab welded to the bottom of it. */
 .bottomnav {
     position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    left: max(var(--space-3), env(safe-area-inset-left));
     z-index: 30;
     display: flex;
     align-items: stretch;
     justify-content: space-around;
     gap: var(--space-1);
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--bg-deep);
-    border-top: 1px solid var(--line);
+    padding: var(--space-1);
+    max-width: 30rem;
+    margin: 0 auto;
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-glass), var(--glass-highlight);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
 }
 
 .bottomnav > a,
@@ -173,23 +303,23 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-1);
-    min-height: var(--nav-h);
+    gap: 3px;
+    min-height: 2.9rem;
     padding: var(--space-2) var(--space-1);
     color: var(--text-dim);
-    text-decoration: none;
-    font-size: var(--step--1);
+    border-radius: var(--radius-m);
+    font-size: 0.68rem;
     line-height: 1;
-    transition: color var(--transition-fast);
+    transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .bottomnav > a:hover {
-    color: var(--cream);
-    text-decoration: none;
+    color: var(--text);
 }
 
 .bottomnav .is-active {
-    color: var(--cream);
+    color: #fff;
+    background: linear-gradient(160deg, rgba(10, 132, 255, .85), rgba(109, 94, 252, .8));
 }
 
 /* Admin navigation --------------------------------------------------------- */
@@ -202,28 +332,31 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2) var(--space-5);
+    gap: var(--space-2) var(--space-4);
     margin-bottom: var(--space-5);
     padding: var(--space-3) var(--space-4);
-    background: var(--bg-deep);
-    border: 1px solid var(--line);
+    background: var(--glass);
+    border: 1px solid var(--glass-line);
     border-radius: var(--radius-m);
+    box-shadow: var(--glass-highlight);
     font-size: var(--step--1);
 }
 
 .admin-nav a {
+    padding: var(--space-1) var(--space-2);
     color: var(--text-dim);
-    text-decoration: none;
-    transition: color var(--transition-fast);
+    border-radius: var(--radius-s);
+    transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .admin-nav a:hover {
-    color: var(--cream);
-    text-decoration: underline;
+    color: var(--text);
+    background: rgba(255, 255, 255, .07);
 }
 
 .admin-nav .is-active {
-    color: var(--cream);
+    color: #fff;
+    background: var(--accent-soft);
 }
 
 /* Responsive switch: top bar on wide screens, bottom bar on phones. --------- */
@@ -247,8 +380,12 @@
         display: flex;
     }
 
+    .container {
+        padding-top: var(--space-4);
+    }
+
     body {
-        /* keep the fixed bar from covering the last post */
-        padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-4));
+        /* keep the floating bar from covering the last post */
+        padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-5));
     }
 }

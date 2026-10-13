@@ -234,9 +234,21 @@ def test_every_gallery_key_has_its_own_label():
 
 def _page_header(html: str) -> str:
     """The identity header of /me, where the student's own picture is shown."""
-    match = re.search(r'<div class="page-header">(.*?)</div>', html, re.S)
+    match = re.search(r'<header class="profile-hero">(.*?)</header>', html, re.S)
     assert match, "the page rendered no header"
     return match.group(1)
+
+
+def _post_cards(html: str) -> str:
+    """Every post card of a feed page, without the chrome around them.
+
+    The navigation bar draws the *viewer's* own picture, so a whole-page search
+    for a gallery URL no longer says anything about the cards; what a check
+    about anonymity or about authors needs is the card itself.
+    """
+    return "".join(
+        re.findall(r'<article class="post-card".*?</article>', html, re.S)
+    )
 
 
 def test_the_me_page_offers_the_whole_gallery(student):
@@ -352,9 +364,14 @@ def test_an_anonymous_post_never_shows_a_picture(student):
 
     response = student.client.get("/feed")
     assert response.status_code == 200
-    # The only card on the page is the anonymous one, and the feed's chrome draws
-    # no picture of the viewer: a gallery URL here would de-anonymise the author.
-    assert "/static/img/avatars/" not in response.text
+    # The only card on the page is the anonymous one. The bars do draw the
+    # *viewer's* own picture -- and here the viewer is the author -- so the check
+    # cannot be "no gallery URL on the page": it is "no gallery URL in a card",
+    # which would de-anonymise the author. That the viewer's picture is on the
+    # page at all is asserted too, so the card check cannot pass by the picture
+    # simply never being drawn.
+    assert "/static/img/avatars/" not in _post_cards(response.text)
+    assert "/static/img/avatars/circle.svg" in response.text
     assert '<span class="post-author">Аноним</span>' in response.text
 
 
@@ -436,7 +453,11 @@ def test_teachers_keep_their_initial(student, session_factory):
         response = student.client.get(url)
         assert response.status_code == 200
         assert '<span class="avatar' in response.text
-        assert "/static/img/avatars/" not in response.text
+        # The navigation bar shows the viewer's own picture, so the page is not
+        # free of gallery URLs. A teacher has no account and no picture, so the
+        # viewer's own avatar in the bar must be the only one here.
+        assert response.text.count("/static/img/avatars/") == 1
+        assert "/static/img/avatars/petals.svg" in response.text
 
 
 def test_a_stale_key_in_the_database_does_not_break_the_feed(student, session_factory):
