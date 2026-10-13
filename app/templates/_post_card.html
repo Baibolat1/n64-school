@@ -1,5 +1,16 @@
+{# One post of the feed, included from feed.html -- which is where everything it
+   reads comes from: the loop hands it ``post`` and ``comment_count``, and the
+   page sets ``avatar_keys``, ``like_counts`` and ``liked_post_ids``. Each is
+   read with a fallback so this partial spells out what it needs and renders
+   empty-handed rather than blowing up if a caller forgets one.
+
+   ``back`` is where the like form returns to: the feed, since that is the page
+   this card is on. #}
 {% set comment_count = comment_count|default(0) %}
 {% set avatar_keys = avatar_keys|default({}) %}
+{% set like_counts = like_counts|default({}) %}
+{% set liked_post_ids = liked_post_ids|default([]) %}
+{% set back = back|default('/feed') %}
 {% import "_macros.html" as ui %}
 <article class="post-card">
     <div class="post-meta">
@@ -10,12 +21,14 @@
         </time>
     </div>
     <p class="post-body">{{ post.body }}</p>
-    <p class="post-footer">
-        <a href="/feed/posts/{{ post.id }}">Комментарии ({{ comment_count }})</a>
-        {# No complaint button on your own content: the route refuses it too
-           (403), this only keeps the form from offering what it cannot do. #}
-        {% if student and student.id != post.author_id %}
-        <a href="/report/post/{{ post.id }}">Пожаловаться</a>
-        {% endif %}
-    </p>
+    {# No complaint button on your own content: the route refuses it too (403),
+       this only keeps the row from offering what it cannot do. #}
+    {{ ui.post_actions(
+        post, csrf_token, back,
+        like_count=like_counts.get(post.id, 0),
+        is_liked=post.id in liked_post_ids,
+        comment_count=comment_count,
+        report_url=('/report/post/' ~ post.id)
+                   if student and student.id != post.author_id else None,
+    ) }}
 </article>

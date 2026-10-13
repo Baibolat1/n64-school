@@ -64,6 +64,7 @@
     --nav-h: 3.25rem;
     --shadow-soft: 0 10px 30px rgba(7, 11, 20, .38);
     --transition-fast: 160ms ease;
+    --transition-slow: 240ms ease;
 }
 
 /* Self-hosted webfonts. Each family is a variable font, so one woff2 per

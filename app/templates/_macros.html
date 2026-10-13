@@ -18,6 +18,8 @@
     'google': '<path d="M18 6a8.5 8.5 0 1 0 2.5 6"/><path d="M12 12h8.5"/>',
     'apple': '<path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>',
     'check': '<path d="M20 6 9 17l-5-5"/>',
+    'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    'comment': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
 } -%}
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
 {%- endmacro %}
@@ -31,6 +33,46 @@
 {% macro avatar(pseudonym, size="", key=None) %}
 {%- set image = avatar_url(avatar_image_key(pseudonym, key)) -%}
 {% if image %}<img class="avatar avatar--img{% if size %} avatar--{{ size }}{% endif %}" src="{{ image }}" alt="" aria-hidden="true">{% else %}<span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>{% endif %}
+{%- endmacro %}
+
+{# The action row of a post: the like toggle, the comment counter and, when the
+   reader is not the author, the complaint link. It is a macro because the row
+   appears twice -- on a feed card and on the post's own page -- and the like is a
+   form whose handshake must be identical in both: the same CSRF token and the
+   same URL to come back to (``back``, one of the two the like route accepts, see
+   app.routers.feed). The token is an argument rather than a global because an
+   imported macro does not see the render context, so ``csrf_token`` would be
+   undefined inside here.
+
+   ``is_liked`` fills the heart for the student reading the page, and
+   ``like_count`` is what everybody sees. ``comment_count=None`` drops the
+   comment link, for the post's own page where it would only point at itself.
+   ``report_url`` the caller builds (or leaves out) because only it knows the
+   reader: complaining about one's own post is refused by the route as well. #}
+{% macro post_actions(post, csrf_token, back, like_count=0, is_liked=False,
+                      comment_count=None, report_url=None) %}
+<div class="post-actions">
+    <form method="post" action="/feed/posts/{{ post.id }}/like">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next_url" value="{{ back }}">
+        <button type="submit" aria-pressed="{{ 'true' if is_liked else 'false' }}"
+                class="action action--like{% if is_liked %} is-liked{% endif %}">
+            {{ icon('heart') }}
+            <span class="visually-hidden">{{ 'Убрать отметку «нравится»' if is_liked else 'Нравится' }}</span>
+            <span class="action__count">{{ like_count }}</span>
+        </button>
+    </form>
+    {%- if comment_count is not none %}
+    <a class="action" href="/feed/posts/{{ post.id }}">
+        {{ icon('comment') }}
+        <span class="visually-hidden">Комментарии</span>
+        <span class="action__count">{{ comment_count }}</span>
+    </a>
+    {%- endif %}
+    {%- if report_url %}
+    <a class="action" href="{{ report_url }}">Пожаловаться</a>
+    {%- endif %}
+</div>
 {%- endmacro %}
 
 {# Average score, formatted in one place so every page shows the same thing: one

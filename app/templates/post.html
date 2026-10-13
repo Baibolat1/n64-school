@@ -13,11 +13,15 @@
         </time>
     </div>
     <p class="post-body">{{ post.body }}</p>
-    {% if student.id != post.author_id %}
-    <p class="post-footer">
-        <a href="/report/post/{{ post.id }}">Пожаловаться</a>
-    </p>
-    {% endif %}
+    {# The reader is already on this post, so the comment link would point back
+       at the page it is on; the like lives here all the same, and comes back
+       here (``back``). #}
+    {{ ui.post_actions(
+        post, csrf_token, '/feed/posts/' ~ post.id,
+        like_count=like_counts.get(post.id, 0),
+        is_liked=post.id in liked_post_ids,
+        report_url=('/report/post/' ~ post.id) if student.id != post.author_id else None,
+    ) }}
 </article>
 
 <section class="comments">

@@ -19,10 +19,12 @@ from app.db.base import get_db
 from app.models.content import CONTENT_STATUS_VISIBLE, Post
 from app.models.student import Student
 from app.repositories import comments as comments_repo
+from app.repositories import likes as likes_repo
 from app.repositories import posts as posts_repo
 from app.repositories import students as students_repo
 from app.schemas.feed import CommentCreate, PostCreate
 from app.services import feed as feed_service
+from app.services import likes as likes_service
 
 # ``require_csrf`` is attached to the whole router: it is a no-op for safe
 # methods, and every state-changing route here is a form POST.
@@ -77,6 +79,18 @@ def _get_visible_post(db: Session, post_id: int) -> Post:
     return post
 
 
+def _like_redirect_target(raw_next: str, post_id: int) -> str:
+    """Where to send the browser back to after a like, without an open redirect.
+
+    A like button lives both in the feed and on the post's own page, so the form
+    carries ``next_url`` to say which one it was. Only the two exact URLs that
+    can contain that button are accepted -- never a URL from the request in
+    general, which would turn this endpoint into a redirector to any site.
+    """
+    allowed = {"/feed", f"/feed/posts/{post_id}"}
+    return raw_next if raw_next in allowed else "/feed"
+
+
 def _render_feed(
     request: Request,
     db: Session,
@@ -99,6 +113,12 @@ def _render_feed(
     avatar_keys = students_repo.avatar_keys_by_id(
         db, [post.author_id for post in posts]
     )
+    # Likes are counted on every card, so both the counters and "which of these
+    # has this student already liked" come back in a single query each (see
+    # app.repositories.likes).
+    post_ids = [post.id for post in posts]
+    likes = likes_repo.count_likes_by_post(db, post_ids)
+    liked_post_ids = likes_repo.liked_post_ids(db, student.id, post_ids)
     return templates.TemplateResponse(
         request,
         "feed.html",
@@ -107,6 +127,8 @@ def _render_feed(
             "posts": [(post, comments_repo.count_visible_comments(db, post.id))
                       for post in posts],
             "avatar_keys": avatar_keys,
+            "like_counts": likes,
+            "liked_post_ids": liked_post_ids,
             "page": page,
             "total_pages": total_pages,
             "error": error,
@@ -135,6 +157,7 @@ def _render_post(
     avatar_keys = students_repo.avatar_keys_by_id(
         db, [post.author_id, *(comment.author_id for comment in comments)]
     )
+    # Comments have no likes, so only the post itself is counted here.
     return templates.TemplateResponse(
         request,
         "post.html",
@@ -143,6 +166,8 @@ def _render_post(
             "post": post,
             "comments": comments,
             "avatar_keys": avatar_keys,
+            "like_counts": likes_repo.count_likes_by_post(db, [post.id]),
+            "liked_post_ids": likes_repo.liked_post_ids(db, student.id, [post.id]),
             "error": error,
             "comment_body": comment_body,
             "comment_is_anonymous": comment_is_anonymous,
@@ -198,6 +223,28 @@ def post_page(
 ) -> Response:
     post = _get_visible_post(db, post_id)
     return _render_post(request, db, student, post)
+
+
+@router.post("/feed/posts/{post_id}/like", response_class=HTMLResponse)
+def toggle_like(
+    post_id: int,
+    next_url: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Toggle the current student's like on a post and go straight back.
+
+    Post/Redirect/Get like the other writes: the heart and the counter are part
+    of the page, so the fresh render is what shows the new state. The result of
+    the toggle is not read here -- the page can see the outcome for itself, and
+    no message is needed either way.
+    """
+    post = _get_visible_post(db, post_id)
+    likes_service.toggle_like(db, student, post)
+    return RedirectResponse(
+        url=_like_redirect_target(next_url, post_id),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.post("/feed/posts/{post_id}/comments", response_class=HTMLResponse)

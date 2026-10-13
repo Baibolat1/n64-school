@@ -77,9 +77,15 @@
     cursor: pointer;
 }
 
+/* A button that is really a link answers like one: the lift, the ring and the
+   brightening that every other button gets on hover are undone here, or the
+   nav would jump about under the pointer. */
 .link-button:hover {
     background: none;
     text-decoration: underline;
+    transform: none;
+    box-shadow: none;
+    filter: none;
 }
 
 /* Burger: a native <details> toggle, no JavaScript involved. ---------------- */

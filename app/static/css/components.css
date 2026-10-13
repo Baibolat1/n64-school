@@ -90,15 +90,28 @@ button {
     border: 1px solid transparent;
     border-radius: var(--radius-s);
     cursor: pointer;
-    transition: filter var(--transition-fast);
+    transition: filter var(--transition-fast), transform var(--transition-fast),
+                box-shadow var(--transition-fast);
 }
 
+/* A button answers the pointer by lifting a hair and gaining a ring of the
+   accent the page is already built from -- no colour is invented for it, and
+   the shadow is the token every other raised surface uses. */
 button:hover {
     filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px var(--cream), var(--shadow-soft);
+}
+
+/* ...and settles back while held, so it does not look detached from the page. */
+button:active {
+    transform: translateY(0);
 }
 
 button:disabled {
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 .checkbox {
@@ -195,12 +208,53 @@ main section > h2 {
     border-radius: var(--radius-m);
 }
 
+/* Inside the feed a post is not a panel but one entry of a stream: the frame,
+   the fill and the radius are dropped and only a hairline separates it from the
+   next post. Scoped to .posts so the admin queues and the review cards, which
+   share `.post-card`, keep their framed look. The animation is scoped with it:
+   these are the only elements that arrive page after page. */
+.posts .post-card {
+    padding: var(--space-4) 0;
+    margin-top: 0;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    animation: post-in var(--transition-slow) both;
+}
+
+/* The last post ends the stream; a rule there would only fence off the
+   pagination. */
+.posts .post-card:last-child {
+    border-bottom: none;
+}
+
+/* Posts unfold downwards instead of appearing all at once. The steps stop
+   after the sixth card: a page holds twenty, and waiting on card twenty would
+   cost more than the effect is worth. */
+.posts .post-card:nth-child(2) { animation-delay: 30ms; }
+.posts .post-card:nth-child(3) { animation-delay: 60ms; }
+.posts .post-card:nth-child(4) { animation-delay: 90ms; }
+.posts .post-card:nth-child(5) { animation-delay: 120ms; }
+.posts .post-card:nth-child(6) { animation-delay: 150ms; }
+
+@keyframes post-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .post-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-1) var(--space-3);
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
     font-size: var(--step--1);
     color: var(--text-dim);
 }
@@ -216,6 +270,89 @@ main section > h2 {
     margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+/* The text sits under the author line rather than against it. */
+.post-body {
+    margin-top: var(--space-2);
+}
+
+/* The action row of a post: outline icons with their counters, the way a feed
+   reads today. Nothing here is a filled button, so nothing competes with the
+   text above it. */
+.post-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-5);
+    margin-top: var(--space-3);
+    font-size: var(--step--1);
+}
+
+/* The like is a form and the comment is a link, and the two have to look the
+   same. The button's own chrome -- the global cream block -- is therefore
+   stripped back to what a link looks like. */
+.post-actions form {
+    display: flex;
+    margin: 0;
+}
+
+.action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-1) var(--space-2);
+    font: inherit;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-s);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--transition-fast), background-color var(--transition-fast),
+                border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+/* `filter` and `box-shadow` are undone here: the global button hover would
+   otherwise brighten an icon and draw a ring around it. */
+.action:hover,
+.action:active {
+    color: var(--cream);
+    background: var(--surface-2);
+    border-color: var(--line);
+    transform: translateY(-1px);
+    filter: none;
+    box-shadow: none;
+    text-decoration: none;
+}
+
+/* A liked heart is filled with the accent cream and animated into it. The fill
+   is set from here rather than in the markup because the SVG carries
+   fill="none" as a presentation attribute, which any rule overrides -- so no
+   extra class is needed on the icon itself. */
+.action--like.is-liked {
+    color: var(--cream);
+}
+
+.action--like.is-liked .icon {
+    fill: var(--cream);
+    animation: heart-fill var(--transition-slow) ease both;
+}
+
+/* The fill is what a click produces: the toggle redirects (Post/Redirect/Get),
+   so the freshly rendered page *is* the feedback and the animation runs as it
+   is drawn. */
+@keyframes heart-fill {
+    from {
+        fill: transparent;
+        transform: scale(0.7);
+    }
+    to {
+        fill: var(--cream);
+        transform: scale(1);
+    }
 }
 
 /* A card's footer row of actions: the comment link, and the complaint link
@@ -234,14 +371,23 @@ main section > h2 {
 
 /* Comments ----------------------------------------------------------------- */
 
+/* A comment continues the post in the same style rather than sitting in a panel
+   of its own: same column, same hairline, a little less room. */
 .comment {
-    padding: var(--space-3) var(--space-4);
-    background: var(--surface-2);
+    padding: var(--space-3) 0;
     border-bottom: 1px solid var(--line);
 }
 
 .comment:last-child {
     border-bottom: none;
+}
+
+/* Inside a comment the footer is only ever the complaint link: it keeps the
+   row but drops the rule, which would otherwise double the separator above. */
+.comment .post-footer {
+    margin-top: var(--space-2);
+    padding-top: 0;
+    border-top: none;
 }
 
 /* Pagination --------------------------------------------------------------- */
@@ -638,4 +784,22 @@ a.stat-card:hover {
 .stat-label {
     font-size: var(--step--1);
     color: var(--text-dim);
+}
+
+/* Motion ------------------------------------------------------------------- */
+
+/* Everything above is decoration, and a reader who has told the system they do
+   not want to be moved gets none of it: the feed is simply already there. The
+   colour changes stay, so a liked heart still looks liked. */
+@media (prefers-reduced-motion: reduce) {
+    .posts .post-card,
+    .action--like.is-liked .icon {
+        animation: none;
+    }
+
+    button:hover,
+    .action:hover,
+    .action:active {
+        transform: none;
+    }
 }

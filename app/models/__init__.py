@@ -2,6 +2,7 @@ from app.models.admin import Admin, AdminSession
 from app.models.audit import ModerationAction, PiiBlockedAttempt, PiiFlag
 from app.models.content import Comment, Post
 from app.models.invite import Invite
+from app.models.like import PostLike
 from app.models.registration_qr import RegistrationQrToken
 from app.models.report import Report
 from app.models.review import Review, ReviewScore
@@ -18,6 +19,7 @@ __all__ = [
     "PiiBlockedAttempt",
     "PiiFlag",
     "Post",
+    "PostLike",
     "RegistrationQrToken",
     "Report",
     "Review",
