@@ -20,10 +20,16 @@ from app.core import csrf
 # * ``form-action 'self'`` and ``base-uri 'none'`` close off form hijacking and
 #   <base> games; ``frame-ancestors 'none'`` repeats the framing ban for
 #   browsers that prefer the CSP directive.
+# * ``X-Robots-Tag`` bans indexing site-wide: this is a closed school site and
+#   nothing here should ever reach a search engine. A header (rather than a
+#   ``<meta>`` tag) is used because this middleware is outermost and
+#   ``setdefault`` drops it onto every response -- 403 pages and static files
+#   included -- where a meta tag could not reach.
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
+    "X-Robots-Tag": "noindex, nofollow",
     "Content-Security-Policy": (
         "default-src 'self'; "
         "img-src 'self'; "

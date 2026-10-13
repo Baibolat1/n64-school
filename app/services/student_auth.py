@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.logging import logger
 from app.core.security import verify_password
 from app.models.student import Student
 
@@ -39,12 +40,23 @@ def login_with_password(db: Session, email: str, password: str) -> Student | Non
     which addresses have accounts. A banned student is still returned; the ban
     is enforced downstream by ``require_not_banned``, as for invite logins.
     """
+    # Refuse oversized input before touching the database or bcrypt; the same
+    # uniform ``None`` keeps an oversized field from revealing that the limit
+    # is what rejected it.
+    if len(email) > settings.MAX_EMAIL_LENGTH:
+        logger.info("student_login_failed")
+        return None
+    if len(password) > settings.MAX_PASSWORD_LENGTH:
+        logger.info("student_login_failed")
+        return None
     student = db.execute(
         select(Student).where(Student.email == email)
     ).scalar_one_or_none()
     if student is None or student.password_hash is None:
+        logger.info("student_login_failed")
         return None
     if not verify_password(student.password_hash, password):
+        logger.info("student_login_failed")
         return None
     return student
 

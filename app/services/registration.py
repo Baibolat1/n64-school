@@ -88,6 +88,9 @@ class RegistrationError(str, Enum):
     EMAIL_TAKEN = "email_taken"
     INVALID_EMAIL = "invalid_email"
     PASSWORD_TOO_SHORT = "password_too_short"
+    # A password above ``MAX_PASSWORD_LENGTH`` is refused, not hashed: an
+    # oversized body would otherwise turn into needless argon2 work.
+    PASSWORD_TOO_LONG = "password_too_long"
     INVALID_TOKEN = "invalid_token"
     TOKEN_EXPIRED = "token_expired"
     NOT_CONFIRMED = "not_confirmed"
@@ -163,8 +166,14 @@ def register_with_password(
     concurrent double-submit.
     """
     email = normalize_email(raw_email)
+    if len(email) > settings.MAX_EMAIL_LENGTH:
+        return RegistrationResult(ok=False, reason=RegistrationError.INVALID_EMAIL)
     if not _EMAIL_RE.match(email):
         return RegistrationResult(ok=False, reason=RegistrationError.INVALID_EMAIL)
+    if len(password) > settings.MAX_PASSWORD_LENGTH:
+        return RegistrationResult(
+            ok=False, reason=RegistrationError.PASSWORD_TOO_LONG
+        )
     if len(password) < settings.MIN_PASSWORD_LENGTH:
         return RegistrationResult(
             ok=False, reason=RegistrationError.PASSWORD_TOO_SHORT
@@ -254,6 +263,8 @@ def start_qr_registration(db: Session, raw_email: str) -> QrStartResult:
     refreshed page cannot leave a trail of live codes.
     """
     email = normalize_email(raw_email)
+    if len(email) > settings.MAX_EMAIL_LENGTH:
+        return QrStartResult(ok=False, reason=RegistrationError.INVALID_EMAIL)
     if not _EMAIL_RE.match(email):
         return QrStartResult(ok=False, reason=RegistrationError.INVALID_EMAIL)
     if _email_taken(db, email):
@@ -367,6 +378,10 @@ def complete_qr_registration(
 
     The token must already be ``confirmed``; on success it becomes ``used``.
     """
+    if len(password) > settings.MAX_PASSWORD_LENGTH:
+        return RegistrationResult(
+            ok=False, reason=RegistrationError.PASSWORD_TOO_LONG
+        )
     if len(password) < settings.MIN_PASSWORD_LENGTH:
         return RegistrationResult(
             ok=False, reason=RegistrationError.PASSWORD_TOO_SHORT

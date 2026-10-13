@@ -15,6 +15,7 @@ so an ordinary typo does not accumulate against the next session.
 """
 
 from app.config import settings
+from app.core.logging import logger
 from app.services.rate_limit import limiter
 
 _ADMIN_PREFIX = "login:admin:"
@@ -22,10 +23,18 @@ _STUDENT_PREFIX = "login:student:"
 _REGISTER_PREFIX = "login:register:"
 
 
-def _consume(key: str, limit: int, window_seconds: int) -> int | None:
-    """Consume one attempt; return the seconds to wait if it was refused."""
+def _consume(key: str, limit: int, window_seconds: int, *, scope: str) -> int | None:
+    """Consume one attempt; return the seconds to wait if it was refused.
+
+    On a refusal the ``scope`` names the protected area (``admin``, ``student``,
+    ``register``). Only that short label is logged -- the key it was built from
+    holds the client IP, which never reaches a log line.
+    """
     result = limiter.check(key, limit=limit, window_seconds=window_seconds)
-    return None if result.allowed else result.retry_after
+    if result.allowed:
+        return None
+    logger.warning("login_throttled scope=%s", scope)
+    return result.retry_after
 
 
 def check_admin(ip: str) -> int | None:
@@ -34,6 +43,7 @@ def check_admin(ip: str) -> int | None:
         _ADMIN_PREFIX + ip,
         settings.ADMIN_LOGIN_MAX_ATTEMPTS,
         settings.ADMIN_LOGIN_WINDOW_SECONDS,
+        scope="admin",
     )
 
 
@@ -43,6 +53,7 @@ def check_student(ip: str) -> int | None:
         _STUDENT_PREFIX + ip,
         settings.STUDENT_LOGIN_MAX_ATTEMPTS,
         settings.STUDENT_LOGIN_WINDOW_SECONDS,
+        scope="student",
     )
 
 
@@ -52,6 +63,7 @@ def check_register(ip: str) -> int | None:
         _REGISTER_PREFIX + ip,
         settings.REGISTER_MAX_ATTEMPTS,
         settings.REGISTER_WINDOW_SECONDS,
+        scope="register",
     )
 
 

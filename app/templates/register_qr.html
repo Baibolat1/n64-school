@@ -30,7 +30,8 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="password">Пароль</label>
     <input id="password" name="password" type="password"
-           autocomplete="new-password" required autofocus>
+           autocomplete="new-password"
+           maxlength="{{ max_password_length }}" required autofocus>
     <button type="submit">Завершить регистрацию</button>
 </form>
 

@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.core.logging import logger
 from app.core.security import (
     generate_session_token,
     hash_session_token,
@@ -37,10 +38,20 @@ def login(db: Session, username: str, password: str) -> str | None:
     or None if the credentials are invalid or the admin is inactive. The raw
     token is never stored -- only its hash is persisted.
     """
+    # Refuse oversized input before the lookup and bcrypt; a uniform ``None``
+    # keeps the limit from becoming an oracle for which field was too long.
+    if len(username) > settings.MAX_ADMIN_USERNAME_LENGTH:
+        logger.info("admin_login_failed")
+        return None
+    if len(password) > settings.MAX_PASSWORD_LENGTH:
+        logger.info("admin_login_failed")
+        return None
     admin = admins_repo.get_admin_by_username(db, username)
     if admin is None or not admin.is_active:
+        logger.info("admin_login_failed")
         return None
     if not verify_password(admin.password_hash, password):
+        logger.info("admin_login_failed")
         return None
 
     raw_token = generate_session_token()

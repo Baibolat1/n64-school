@@ -15,6 +15,7 @@ EXPECTED = {
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "referrer-policy": "no-referrer",
+    "x-robots-tag": "noindex, nofollow",
 }
 
 
@@ -58,6 +59,14 @@ def test_headers_on_a_refused_csrf_post(client):
     assert response.status_code == 403
     for name, value in EXPECTED.items():
         assert response.headers.get(name) == value
+
+
+def test_robots_txt_disallows_everything(client):
+    """The second layer of the noindex ban, for crawlers that skip the header."""
+    response = client.get("/robots.txt")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "Disallow: /" in response.text
 
 
 def test_hsts_is_absent_over_plain_http(client):

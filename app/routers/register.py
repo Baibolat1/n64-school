@@ -132,6 +132,10 @@ def register_submit(
                 f"Пароль слишком короткий: минимум "
                 f"{settings.MIN_PASSWORD_LENGTH} символов"
             ),
+            registration_service.RegistrationError.PASSWORD_TOO_LONG: (
+                f"Пароль слишком длинный: максимум "
+                f"{settings.MAX_PASSWORD_LENGTH} символов"
+            ),
         }.get(result.reason, GENERIC_ERROR)
         return templates.TemplateResponse(
             request,
@@ -293,6 +297,10 @@ def qr_password(
             registration_service.RegistrationError.PASSWORD_TOO_SHORT: (
                 f"Пароль слишком короткий: минимум "
                 f"{settings.MIN_PASSWORD_LENGTH} символов"
+            ),
+            registration_service.RegistrationError.PASSWORD_TOO_LONG: (
+                f"Пароль слишком длинный: максимум "
+                f"{settings.MAX_PASSWORD_LENGTH} символов"
             ),
             registration_service.RegistrationError.EMAIL_TAKEN: TAKEN_ERROR,
         }.get(result.reason, GENERIC_ERROR)

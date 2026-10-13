@@ -29,11 +29,17 @@ THROTTLE_ERROR = "Слишком много попыток входа. Попр�
 
 
 def _set_session_cookie(response: Response, raw_token: str) -> None:
+    """Attach the admin session cookie to ``response``.
+
+    SameSite is Strict because the whole admin area lives same-site: it has no
+    "outside in" links that must carry the session along, so nothing is lost by
+    refusing to send the cookie on cross-site navigation.
+    """
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=raw_token,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=settings.COOKIE_SECURE,
         path="/",
         max_age=settings.ADMIN_SESSION_TTL_HOURS * 3600,
@@ -113,6 +119,18 @@ def dashboard(
     )
 
 
+def _invites_context(
+    db: Session, admin: Admin, *, error: str | None = None
+) -> dict:
+    """Context for ``admin/invites.html``, shared by the page and the POST guard."""
+    return {
+        "admin": AdminOut.model_validate(admin),
+        "invites": invites_service.list_invites(db),
+        "default_ttl_days": settings.INVITE_TTL_DAYS,
+        "error": error,
+    }
+
+
 @router.get("/invites", response_class=HTMLResponse)
 def invites_page(
     request: Request,
@@ -120,13 +138,7 @@ def invites_page(
     db: Session = Depends(get_db),
 ) -> Response:
     return templates.TemplateResponse(
-        request,
-        "admin/invites.html",
-        {
-            "admin": AdminOut.model_validate(admin),
-            "invites": invites_service.list_invites(db),
-            "default_ttl_days": settings.INVITE_TTL_DAYS,
-        },
+        request, "admin/invites.html", _invites_context(db, admin)
     )
 
 
@@ -137,6 +149,22 @@ def invites_create(
     ttl_days: Annotated[int, Form()] = settings.INVITE_TTL_DAYS,
     db: Session = Depends(get_db),
 ) -> Response:
+    if not 1 <= ttl_days <= settings.INVITE_TTL_MAX_DAYS:
+        # Re-render the whole page rather than 422, so the admin can correct the
+        # value in the same form. The bound is also what the service clamps to.
+        return templates.TemplateResponse(
+            request,
+            "admin/invites.html",
+            _invites_context(
+                db,
+                admin,
+                error=(
+                    "Срок действия должен быть от 1 до "
+                    f"{settings.INVITE_TTL_MAX_DAYS} дней"
+                ),
+            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     raw_code = invites_service.create_invite(db, admin, ttl_days)
     return templates.TemplateResponse(
         request,

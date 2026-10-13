@@ -11,6 +11,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="email">Email</label>
     <input id="email" name="email" type="email" autocomplete="email"
+           maxlength="{{ max_email_length }}"
            value="{{ email or '' }}" required autofocus>
 
     <button type="submit">Показать QR-код</button>

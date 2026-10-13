@@ -3,6 +3,7 @@
 {% block content %}
 {% include "admin/_nav.html" %}
 <section class="card">
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <h1>Коды приглашений</h1>
 <p><a href="/admin">&larr; В панель администратора</a></p>
 
@@ -10,6 +11,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="ttl_days">Срок действия, дней</label>
     <input id="ttl_days" name="ttl_days" type="number" min="1"
+           max="{{ invite_ttl_max_days }}"
            value="{{ default_ttl_days }}" required>
     <button type="submit">Создать код</button>
 </form>

@@ -1,12 +1,13 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request, status
-from fastapi.responses import Response
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.core.csrf import CSRFError
 from app.core.deps import StudentBlockedError
+from app.core.logging import configure_logging, log_startup_warnings
 from app.core.middleware import CSRFMiddleware, SecurityHeadersMiddleware
 from app.core.templates import templates
 from app.routers import admin as admin_router
@@ -20,6 +21,11 @@ from app.routers import teachers as teachers_router
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(title=settings.APP_NAME)
+
+# One logger with one format for the whole project, and a warning (never a
+# crash) when the configuration is unsafe to expose on the internet.
+configure_logging()
+log_startup_warnings()
 
 # Middleware is applied to every response, error pages included. Starlette wraps
 # later additions around earlier ones, so the header middleware ends up
@@ -58,3 +64,11 @@ async def csrf_error_handler(request: Request, exc: CSRFError) -> Response:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/robots.txt")
+async def robots_txt() -> PlainTextResponse:
+    # A second layer on top of the X-Robots-Tag header: crawlers that ignore the
+    # header on non-HTML responses (or do not read headers at all) still obey
+    # this file. The whole site is closed, so everything is disallowed.
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")

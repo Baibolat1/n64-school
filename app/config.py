@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # Default lifetime, in days, of a newly created invite code. The admin may
     # override it per code on the /admin/invites form.
     INVITE_TTL_DAYS: int = 14
+    # Upper bound, in days, of an invite code's lifetime: the admin may raise
+    # the default, but not without limit -- a code that outlives its purpose is
+    # a standing way in.
+    INVITE_TTL_MAX_DAYS: int = 365
     # Minimum number of days between two manual alias changes by the same
     # student. The cooldown protects against harassment and keeps a student
     # from "running away" from their reputation; the very first change (while
@@ -62,6 +66,18 @@ class Settings(BaseSettings):
     OPEN_REGISTRATION_LIMIT: int = 30
     # Minimum accepted password length for self-registered students.
     MIN_PASSWORD_LENGTH: int = 8
+    # Upper bounds on the free-text fields the self-registration forms accept.
+    # They keep a multi-megabyte body from reaching the regexes, the argon2 hash
+    # or the database; they are also rendered as maxlength on the forms.
+    # A long password is not a security win here (argon2 has no upper limit) but
+    # an unbounded one is wasted work, hence the cap.
+    MAX_EMAIL_LENGTH: int = 254
+    MAX_PASSWORD_LENGTH: int = 128
+    # Invite codes are much shorter than an email; the cap is checked before the
+    # code is hashed.
+    MAX_INVITE_CODE_INPUT_LENGTH: int = 32
+    # Upper bound on the admin login field, rendered as maxlength there.
+    MAX_ADMIN_USERNAME_LENGTH: int = 64
     # Lifetime, in hours, of a student registration QR token. After it expires
     # the novice must generate a new code ("Обновить код").
     QR_TOKEN_TTL_HOURS: int = 24

@@ -40,6 +40,7 @@ from enum import Enum
 
 from sqlalchemy.orm import Session
 
+from app.core.logging import logger
 from app.models.student import Student
 from app.repositories import pii_blocked as pii_blocked_repo
 from app.repositories import pii_flags as pii_flags_repo
@@ -129,18 +130,23 @@ def screen_text(
 
     limit = limiter.check(rate_key, limit=rate_limit, window_seconds=rate_window_seconds)
     if not limit.allowed:
+        # A refusal, so warning -- the same level the login throttle uses.
+        logger.warning("publish_rate_limited target_type=%s", target_type)
         return Screening(
             error=PublishError.RATE_LIMITED, retry_after=limit.retry_after
         )
 
     screened = check_text(body)
     if screened.verdict is Verdict.BLOCK:
-        # Only the fact is kept; the message itself is dropped for good.
+        # Only the fact is kept; the message itself is dropped for good. The log
+        # names the target and the fired rule codes, never the text.
+        codes = blocking_codes(screened)
+        logger.info("publish_pii_blocked target_type=%s codes=%s", target_type, codes)
         pii_blocked_repo.record_attempt(
             db,
             student_id=student_id,
             target_type=target_type,
-            rule_codes=blocking_codes(screened),
+            rule_codes=codes,
         )
         db.commit()
         return Screening(error=PublishError.PII_BLOCKED)

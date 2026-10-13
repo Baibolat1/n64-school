@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core import csrf
 from app.core.csrf import CSRFError
+from app.core.logging import logger
 from app.db.base import get_db
 from app.models.admin import Admin
 from app.models.student import Student
@@ -51,6 +52,11 @@ async def require_csrf(request: Request) -> None:
     cookie = request.cookies.get(settings.CSRF_COOKIE_NAME, "")
 
     if not (csrf.is_valid_token(submitted) and csrf.tokens_match(submitted, cookie)):
+        # Path only: a query string can carry an e-mail (e.g. the login form
+        # echoes it back), so ``request.url`` must never be logged.
+        logger.warning(
+            "csrf_refused method=%s path=%s", request.method, request.url.path
+        )
         raise CSRFError()
 
 

@@ -13,19 +13,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.config import settings  # noqa: E402
+from app.core.security import hash_password  # noqa: E402
 from app.models.content import Post  # noqa: E402
 from app.models.student import Student  # noqa: E402
 from app.repositories import pii_blocked as pii_blocked_repo  # noqa: E402
 from app.repositories import pii_flags as pii_flags_repo  # noqa: E402
 from app.repositories import reports as reports_repo  # noqa: E402
 from app.repositories import students as students_repo  # noqa: E402
+from app.repositories.admins import create_admin  # noqa: E402
 from app.services import invites as invites_service  # noqa: E402
+from tests.conftest import ADMIN_PASSWORD, ADMIN_USERNAME  # noqa: E402
 
 # A protected page that exists today, so the access rules can be checked before
 # the moderation screens land.
 PROTECTED_PAGE = "/admin/invites"
 
 DASHBOARD = "/admin"
+
+# The hidden field every form renders; matching it is how a test gets a token
+# that goes with the CSRF cookie the same response set.
+_CSRF_FIELD_RE = re.compile(r'name="csrf_token" value="([^"]*)"')
 
 
 def _counter(html: str, label: str) -> int:
@@ -261,3 +268,61 @@ def test_a_student_page_has_no_admin_navigation(student):
     assert 'class="admin-nav"' not in response.text
     for href in ADMIN_NAV_LINKS:
         assert f'href="{href}"' not in response.text
+
+
+# The admin session cookie carries the tightest SameSite: the whole admin area
+# is same-site, so refusing to send it on an "outside in" navigation costs the
+# moderator nothing. The other cookies keep the lax default: the CSRF cookie is
+# checked right below, the student session cookie in tests/test_registration.py
+# and tests/test_csrf.py.
+
+
+def _csrf_from(client, page: str) -> str:
+    """Token from a public page, for tests that hold no session yet."""
+    response = client.get(page)
+    assert response.status_code == 200, response.text
+    match = _CSRF_FIELD_RE.search(response.text)
+    assert match, "the page rendered no csrf_token field"
+    return match.group(1)
+
+
+def _set_cookie(response, name: str) -> str:
+    """The ``Set-Cookie`` header for ``name`` (a response may carry several)."""
+    prefix = f"{name}="
+    headers = response.headers.get_list("set-cookie")
+    for header in headers:
+        if header.lower().startswith(prefix.lower()):
+            return header
+    raise AssertionError(f"no Set-Cookie for {name!r}: {headers}")
+
+
+def test_admin_login_sets_a_strict_session_cookie(client, session_factory):
+    # The login POST is the only place the real cookie is issued, so the header
+    # is checked on the wire rather than on the fixture's hand-built session.
+    with session_factory() as db:
+        create_admin(
+            db, username=ADMIN_USERNAME, password_hash=hash_password(ADMIN_PASSWORD)
+        )
+        db.commit()
+    token = _csrf_from(client, "/admin/login")
+
+    response = client.post(
+        "/admin/login",
+        data={
+            "username": ADMIN_USERNAME,
+            "password": ADMIN_PASSWORD,
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    cookie = _set_cookie(response, settings.SESSION_COOKIE_NAME)
+    assert "samesite=strict" in cookie.lower()
+
+
+def test_the_other_cookies_stay_lax(client):
+    # The CSRF cookie the login page issues is untouched by the admin change.
+    response = client.get("/admin/login")
+
+    assert "samesite=lax" in _set_cookie(response, settings.CSRF_COOKIE_NAME).lower()

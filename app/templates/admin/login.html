@@ -8,11 +8,13 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label for="username">Логин</label>
     <input id="username" name="username" type="text"
-           autocomplete="username" value="{{ username or '' }}" required autofocus>
+           autocomplete="username" maxlength="{{ max_admin_username_length }}"
+           value="{{ username or '' }}" required autofocus>
 
     <label for="password">Пароль</label>
     <input id="password" name="password" type="password"
-           autocomplete="current-password" required>
+           autocomplete="current-password"
+           maxlength="{{ max_password_length }}" required>
 
     <button type="submit">Войти</button>
 </form>

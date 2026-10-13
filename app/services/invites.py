@@ -69,6 +69,9 @@ def hash_invite_code(raw_code: str) -> str:
 
 def create_invite(db: Session, admin: Admin, ttl_days: int) -> str:
     """Create an invite and return its raw code (shown to the admin once)."""
+    # Defensive clamp for direct callers of this service; the form's own bound
+    # is validated in the router, which is what a browser actually reaches.
+    ttl_days = max(1, min(ttl_days, settings.INVITE_TTL_MAX_DAYS))
     raw_code = generate_invite_code()
     invite = Invite(
         code_hash=hash_invite_code(raw_code),
@@ -94,6 +97,10 @@ def redeem_invite(db: Session, raw_code: str) -> Student | None:
     UPDATE reports one affected row proceeds to create the student, so two
     concurrent requests with the same code cannot both succeed.
     """
+    # A code is far shorter than this; an oversized raw string is refused before
+    # normalization and hashing so a huge body never reaches the HMAC.
+    if len(raw_code) > settings.MAX_INVITE_CODE_INPUT_LENGTH:
+        return None
     code_hash = hash_invite_code(raw_code)
     now = _utcnow()
 
