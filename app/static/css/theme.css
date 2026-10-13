@@ -35,7 +35,8 @@
     --glass: rgba(255, 255, 255, .04);
     --glass-strong: rgba(22, 22, 25, .72);
     --glass-soft: rgba(255, 255, 255, .03);
-    /* A lid, not a pane. While the page is still the bar shows the lights
+    /* A lid, not a pane: the scrolled header closes up into it, and so does the
+       panel of a "..." menu. While the page is still, the bar shows the lights
        through it (--dock); the moment text starts scrolling underneath there is
        something to read against, and only thickness holds it back. Kept at the
        page colour so the bar stays the same material it was. */

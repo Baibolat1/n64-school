@@ -39,27 +39,32 @@
     </div>
 </section>
 
-<section class="card">
-    <h2>Оставить комментарий</h2>
+<section class="comments-compose">
+    <h2 class="visually-hidden">Оставить комментарий</h2>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <p class="error" role="alert" data-error-slot hidden></p>
+    {# Тот же компактный набор, что и в ленте: одна строка под подсказку, чип
+       «Анонимно» рядом и круглая кнопка с иконкой. См. _comment.html для того,
+       куда встаёт ответ сервера. #}
     <form method="post" action="/feed/posts/{{ post.id }}/comments"
-          class="stacked-form"
+          class="composer__form"
           data-async="comment" data-api="/api/posts/{{ post.id }}/comments">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label for="comment-body">Текст</label>
-        <textarea id="comment-body" name="body" rows="3" maxlength="2000"
+        {{ ui.avatar(student.alias, 'sm', student.avatar_key) }}
+        <label class="visually-hidden" for="comment-body">Написать комментарий</label>
+        <textarea id="comment-body" name="body" rows="1" maxlength="2000"
+                  placeholder="Написать комментарий…" data-autogrow
                   required>{{ comment_body or '' }}</textarea>
 
-        <label class="checkbox">
+        <label class="chip-toggle">
             <input type="checkbox" name="is_anonymous" value="true"
                    {% if comment_is_anonymous %}checked{% endif %}>
-            Опубликовать анонимно
+            <span>Анонимно</span>
         </label>
-        <p class="hint">При анонимной публикации вместо псевдонима будет показано
-            «Аноним».</p>
-
-        <button type="submit">Отправить</button>
+        <button type="submit" class="btn--icon btn--send">
+            {{ ui.icon('send') }}
+            <span class="visually-hidden">Отправить</span>
+        </button>
     </form>
 </section>
 {% endblock %}

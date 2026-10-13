@@ -16,7 +16,7 @@ from app.core.deps import require_csrf, require_not_banned
 from app.core.pagination import page_window, parse_page
 from app.core.templates import templates
 from app.db.base import get_db
-from app.models.content import CONTENT_STATUS_VISIBLE, Post
+from app.models.content import CONTENT_STATUS_VISIBLE, Comment, Post
 from app.models.student import Student
 from app.repositories import comments as comments_repo
 from app.repositories import likes as likes_repo
@@ -83,6 +83,25 @@ def _like_redirect_target(raw_next: str, post_id: int) -> str:
     """
     allowed = {"/feed", f"/feed/posts/{post_id}"}
     return raw_next if raw_next in allowed else "/feed"
+
+
+def _get_visible_comment(db: Session, post_id: int, comment_id: int) -> Comment:
+    """Load a visible comment of this post, or raise 404.
+
+    The comment has to belong to the post in the URL: a like posted to one post
+    with the id of a comment under another would otherwise sail through, and the
+    page it returns to would show a heart filled for something else.
+    """
+    comment = comments_repo.get_comment(db, comment_id)
+    if (
+        comment is None
+        or comment.post_id != post_id
+        or comment.status != CONTENT_STATUS_VISIBLE
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Комментарий не найден"
+        )
+    return comment
 
 
 def _render_feed(
@@ -155,7 +174,10 @@ def _render_post(
     avatar_keys = students_repo.avatar_keys_by_id(
         db, [post.author_id, *(comment.author_id for comment in comments)]
     )
-    # Comments have no likes, so only the post itself is counted here.
+    # And the same rule for the hearts: the post's own counter, plus one query
+    # each for the counters on every comment of the page and for the ones this
+    # student has already filled in (see app.repositories.likes).
+    comment_ids = [comment.id for comment in comments]
     return templates.TemplateResponse(
         request,
         "post.html",
@@ -166,6 +188,10 @@ def _render_post(
             "avatar_keys": avatar_keys,
             "like_counts": likes_repo.count_likes_by_post(db, [post.id]),
             "liked_post_ids": likes_repo.liked_post_ids(db, student.id, [post.id]),
+            "comment_like_counts": likes_repo.count_likes_by_comment(db, comment_ids),
+            "liked_comment_ids": likes_repo.liked_comment_ids(
+                db, student.id, comment_ids
+            ),
             "error": error,
             "comment_body": comment_body,
             "comment_is_anonymous": comment_is_anonymous,
@@ -241,6 +267,34 @@ def toggle_like(
     likes_service.toggle_like(db, student, post)
     return RedirectResponse(
         url=_like_redirect_target(next_url, post_id),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/feed/posts/{post_id}/comments/{comment_id}/like", response_class=HTMLResponse
+)
+def toggle_comment_like(
+    post_id: int,
+    comment_id: int,
+    next_url: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Toggle the current student's like on a comment and go straight back.
+
+    The post's own like, one level down: same Post/Redirect/Get, same silence
+    about the outcome. The comment is looked up through ``_get_visible_comment``
+    so the pair in the URL has to make sense and a hidden comment cannot be
+    liked through a route that never shows it.
+    """
+    post = _get_visible_post(db, post_id)
+    comment = _get_visible_comment(db, post_id, comment_id)
+    likes_service.toggle_comment_like(db, student, comment)
+    # ``next_url`` is whitelisted the same way as the post's, and falls back to
+    # the post the comment hangs under -- which is the only page that shows it.
+    return RedirectResponse(
+        url=_like_redirect_target(next_url, post.id),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

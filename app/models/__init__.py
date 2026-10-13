@@ -3,7 +3,7 @@ from app.models.audit import ModerationAction, PiiBlockedAttempt, PiiFlag
 from app.models.content import Comment, Post
 from app.models.esports import StudentBadge, Tournament
 from app.models.invite import Invite
-from app.models.like import PostLike
+from app.models.like import CommentLike, PostLike
 from app.models.registration_qr import RegistrationQrToken
 from app.models.report import Report
 from app.models.review import Review, ReviewScore
@@ -16,6 +16,7 @@ __all__ = [
     "Admin",
     "AdminSession",
     "Comment",
+    "CommentLike",
     "Criterion",
     "DevApplication",
     "Homework",

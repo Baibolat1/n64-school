@@ -13,34 +13,35 @@
 {% include "_widgets.html" %}
 
 <section class="glass composer">
-    <div class="composer-head">
-        {{ ui.avatar(student.alias, 'sm', student.avatar_key) }}
-        <h2>Что нового?</h2>
-    </div>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     {# Куда ложится отказ, когда форма уходит без перезагрузки: сервер называет
        причину теми же словами, что и здесь, и скрипт пишет её сюда, чтобы текст
        не потерялся (см. app/static/app.js). Без скрипта слот пуст. #}
     <p class="error" role="alert" data-error-slot hidden></p>
-    <form method="post" action="/feed/posts" class="stacked-form"
+    {# Одна строка, которая растёт до четырёх: место под мысль занимает она сама,
+       а не пустая коробка. Высоту правит скрипт (data-autogrow), ширина поля и
+       вид — стили; без скрипта это обычная textarea с одной видимой строкой. #}
+    <form method="post" action="/feed/posts" class="composer__form"
           data-async="post" data-api="/api/posts">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {{ ui.avatar(student.alias, 'sm', student.avatar_key) }}
         <label class="visually-hidden" for="body">Текст</label>
-        <textarea id="body" name="body" rows="4" maxlength="5000"
-                  placeholder="Поделитесь чем-нибудь со школой…"
+        <textarea id="body" name="body" rows="1" maxlength="5000"
+                  placeholder="Что нового?" data-autogrow
                   required>{{ body or '' }}</textarea>
 
-        <div class="composer-foot">
-            <label class="checkbox">
-                <input type="checkbox" name="is_anonymous" value="true"
-                       {% if is_anonymous %}checked{% endif %}>
-                Анонимно
-            </label>
-            <button type="submit">{{ ui.icon('send') }} Опубликовать</button>
-        </div>
-        <p class="hint">При анонимной публикации вместо псевдонима будет показано
-            «Аноним».</p>
+        <label class="chip-toggle">
+            <input type="checkbox" name="is_anonymous" value="true"
+                   {% if is_anonymous %}checked{% endif %}>
+            <span>Анонимно</span>
+        </label>
+        <button type="submit" class="btn--icon btn--send">
+            {{ ui.icon('send') }}
+            <span class="visually-hidden">Опубликовать</span>
+        </button>
     </form>
+    <p class="hint">Если включить «Анонимно», вместо псевдонима будет показано
+        «Аноним».</p>
 </section>
 
 {# Новая публикация встаёт в начало именно этого списка: идентификатор — точка,

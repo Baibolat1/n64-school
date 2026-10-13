@@ -3,25 +3,42 @@
    comment the script inserts are one template and cannot drift apart.
 
    Everything it reads comes from the caller: the loop on the post's page sets
-   ``comment`` and the page sets ``avatar_keys``. Both are read with a fallback
-   so this partial spells out what it needs and renders empty-handed rather than
-   blowing up if a caller forgets one. #}
+   ``comment`` and the page sets ``avatar_keys``, ``comment_like_counts`` and
+   ``liked_comment_ids``. Each is read with a fallback so this partial spells out
+   what it needs and renders empty-handed rather than blowing up if a caller
+   forgets one -- and so a freshly written comment, which nobody can have liked
+   yet, is rendered by the same file with the counters left out.
+
+   The shape is the one a comment column reads best in: the picture in a narrow
+   column of its own with a hairline running down from it into the next comment,
+   and the name, the time, the text and the two small actions stacked beside it.
+   The address of a like is built from ``comment.post_id``, never from a ``post``
+   the caller may or may not have passed. #}
 {% set avatar_keys = avatar_keys|default({}) %}
+{% set comment_like_counts = comment_like_counts|default({}) %}
+{% set liked_comment_ids = liked_comment_ids|default([]) %}
+{% set csrf_token = csrf_token|default('') %}
 {% import "_macros.html" as ui %}
 <article class="comment">
-    <div class="post-meta">
+    <div class="comment__avatar">
         {{ ui.avatar(comment.display_alias, 'sm', avatar_keys.get(comment.author_id)) }}
-        <span class="post-author">{{ comment.display_alias }}</span>
-        <time datetime="{{ comment.created_at.isoformat() }}">
-            {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
-        </time>
     </div>
-    <p class="comment-body">{{ comment.body }}</p>
-    {# As on a post: no complaint button on your own comment, and the route
-       refuses it anyway. #}
-    {% if student and student.id != comment.author_id %}
-    <p class="post-footer">
-        <a href="/report/comment/{{ comment.id }}">Пожаловаться</a>
-    </p>
-    {% endif %}
+    <div class="comment__main">
+        <p class="comment__head">
+            <span class="comment__author">{{ comment.display_alias }}</span>
+            <time class="comment__time" datetime="{{ comment.created_at.isoformat() }}">
+                {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
+            </time>
+        </p>
+        <p class="comment__body">{{ comment.body }}</p>
+        {# As on a post: no complaint menu on your own comment, and the route
+           refuses it anyway. #}
+        {{ ui.comment_actions(
+            comment, csrf_token, '/feed/posts/' ~ comment.post_id,
+            like_count=comment_like_counts.get(comment.id, 0),
+            is_liked=comment.id in liked_comment_ids,
+            report_url=('/report/comment/' ~ comment.id)
+                       if student and student.id != comment.author_id else None,
+        ) }}
+    </div>
 </article>

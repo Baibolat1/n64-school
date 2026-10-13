@@ -503,7 +503,7 @@ body:not(.login-page) main > * + * {
 
 /* User text is rendered as plain text; line breaks come from CSS, not <br>. */
 .post-body,
-.comment-body {
+.comment__body {
     margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -574,10 +574,73 @@ body:not(.login-page) main > * + * {
     font-variant-numeric: tabular-nums;
 }
 
-/* A liked heart is filled with the accent and animated into it. The fill is
-   set from here rather than in the markup because the SVG carries fill="none"
-   as a presentation attribute, which any rule overrides -- so no extra class
-   is needed on the icon itself. */
+/* The size an action row wears under a comment, or for the one control that has
+   no counter to carry: less air around it, and the icon shrinks with it, since
+   `.icon` is measured in em. */
+.action--compact {
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+}
+
+/* The "..." that hides the complaint link: a summary, so it opens its own
+   panel with no script at all. It is never a button and never submits. */
+.action--more {
+    list-style: none;
+    color: var(--text-dim);
+}
+
+.action--more::-webkit-details-marker {
+    display: none;
+}
+
+.action--more::marker {
+    content: "";
+}
+
+/* Where a "..." menu opens: under its own summary, over whatever it covers. It
+   is a lid rather than a pane -- the same --bar-strong the scrolled header
+   closes up into -- because underneath it is a card of text, not the page's own
+   light, and a menu has to be readable over whatever it hides. The parent is the
+   <details> itself, whose position is not fixed and whose opening is the only
+   thing that shows this. */
+.menu {
+    position: relative;
+}
+
+.menu-panel {
+    position: absolute;
+    right: 0;
+    z-index: 5;
+    min-width: 10rem;
+    margin-top: var(--space-1);
+    padding: var(--space-1);
+    font-size: var(--step--1);
+    font-weight: 500;
+    background: var(--glass-sheen), var(--bar-strong);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: var(--radius-m);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.menu-panel a {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    color: var(--text-dim);
+    border-radius: var(--radius-s);
+    text-decoration: none;
+}
+
+.menu-panel a:hover {
+    color: var(--text);
+    background: var(--control);
+}
+
+/* A liked heart is filled with the accent and popped into it. The fill is set
+   from here rather than in the markup because the SVG carries fill="none" as a
+   presentation attribute, which any rule overrides -- so no extra class is
+   needed on the icon itself. */
 .action--like.is-liked {
     color: #ff5d8f;
     background: rgba(255, 93, 143, .12);
@@ -586,19 +649,20 @@ body:not(.login-page) main > * + * {
 .action--like.is-liked .icon {
     fill: #ff5d8f;
     stroke: #ff5d8f;
-    animation: heart-fill var(--transition-slow) cubic-bezier(.34, 1.56, .64, 1) both;
+    animation: heart-pop 200ms cubic-bezier(.34, 1.56, .64, 1) both;
 }
 
-/* The fill is what a click produces: the toggle redirects (Post/Redirect/Get),
-   so the freshly rendered page *is* the feedback and the animation runs as it
-   is drawn. */
-@keyframes heart-fill {
+/* The pop is what a click produces: the toggle redirects (Post/Redirect/Get),
+   so the freshly rendered page *is* the feedback, and the animation runs as it
+   is drawn -- and again in place when the script fills the heart without
+   leaving the page. One quick beat: out to 1.3 and settled back at 1. */
+@keyframes heart-pop {
     from {
         fill: transparent;
-        transform: scale(.6);
+        transform: scale(.7);
     }
-    60% {
-        transform: scale(1.18);
+    40% {
+        transform: scale(1.3);
     }
     to {
         fill: #ff5d8f;
@@ -627,20 +691,61 @@ body:not(.login-page) main > * + * {
     color: var(--text);
 }
 
-/* Composer (the "new post" form on the feed) ------------------------------- */
+/* Composer ------------------------------------------------------------------
+   One row, not a box: a picture, a field that grows as it is typed into, the
+   anonymity chip and a round send button. The field is one line tall in the
+   markup (``rows="1"``) and the script lifts it to four at most
+   (``data-autogrow``, see app/static/app.js): the room a thought needs is
+   borrowed from the lines it actually takes, not reserved in advance by an
+   empty box.
 
-.composer-head {
+   The same row serves the feed's "new post" and the comment form under a post,
+   so the two read as the same control in two places. Without the script it is
+   an ordinary textarea that scrolls, a chip and a button. */
+
+.composer__form {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
+    align-items: flex-end;
+    gap: var(--space-2);
+    margin-top: 0;
 }
 
-.composer-head h2 {
-    font-size: var(--step-1);
-    color: var(--text);
+/* The picture sits with the send button rather than in the middle of the field:
+   a composer that has grown to four rows must not leave its author's face
+   floating somewhere in the text. */
+.composer__form > .avatar {
+    flex: none;
+    align-self: flex-end;
+    margin-bottom: var(--space-1);
 }
 
+.composer__form textarea {
+    /* The recessed field of every other form, cut down to one row and without
+       the drag handle: its height is what it has to say. */
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-l);
+    resize: none;
+    overflow-y: auto;
+}
+
+.composer__form .btn--send {
+    flex: none;
+    margin: 0;
+    padding: 0;
+}
+
+.composer .hint {
+    margin-top: var(--space-2);
+    font-size: var(--step--1);
+}
+
+/* The assistant still puts its one button under the field in a row of its own;
+   it gets the chat layout -- the input pinned above the dock -- in pass 3, and
+   this row goes with it. */
 .composer-foot {
     display: flex;
     align-items: center;
@@ -654,8 +759,51 @@ body:not(.login-page) main > * + * {
     margin-top: 0;
 }
 
-.composer .hint {
-    margin-top: var(--space-1);
+/* A checkbox that reads as a chip rather than as a labelled box: the pill is the
+   <span>, so the checked state can be drawn with the sibling combinator and
+   needs no :has() and no script. The box itself keeps its place in the tab
+   order and is only taken out of sight (see also .checkbox, the plain form of
+   the same control). */
+.chip-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+}
+
+.chip-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.chip-toggle span {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--step--1);
+    font-weight: 500;
+    color: var(--text-dim);
+    background: var(--control);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    transition: color var(--transition-fast), background var(--transition-fast),
+                border-color var(--transition-fast);
+}
+
+.chip-toggle input:checked + span {
+    color: #fff;
+    background: rgba(10, 132, 255, .22);
+    border-color: rgba(10, 132, 255, .5);
+}
+
+.chip-toggle input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
 }
 
 /* Empty state: says what is missing and what to do about it, in a panel, so a
@@ -668,15 +816,21 @@ body:not(.login-page) main > * + * {
     font-weight: 500;
 }
 
-/* Comments ----------------------------------------------------------------- */
+/* Comments -----------------------------------------------------------------
+   A comment is a row, not a panel: the picture in a column of its own and
+   everything else stacked beside it, separated from the next one by a hairline.
+   The column is what makes a page of comments read as a conversation -- a line
+   runs down from under each picture towards the next one. */
 
 .comments > h2 {
     margin-bottom: var(--space-2);
+    font-size: var(--step-0);
+    color: var(--text-dim);
 }
 
-/* A comment continues the post in the same style rather than sitting in a panel
-   of its own: same column, same hairline, a little less room. */
 .comment {
+    display: flex;
+    gap: var(--space-3);
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--glass-line);
 }
@@ -685,12 +839,81 @@ body:not(.login-page) main > * + * {
     border-bottom: none;
 }
 
-/* Inside a comment the footer is only ever the complaint link: it keeps the
-   row but drops the rule, which would otherwise double the separator above. */
-.comment .post-footer {
+.comment__avatar {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* The connector takes whatever height the row has left, which is exactly the
+   distance down to the next comment. The last one has nobody to point at, so
+   its line would only be a stub. */
+.comment__avatar::after {
+    content: "";
+    flex: 1;
+    width: 1px;
+    min-height: var(--space-2);
     margin-top: var(--space-2);
-    padding-top: 0;
-    border-top: none;
+    background: var(--glass-line);
+}
+
+.comment:last-child .comment__avatar::after {
+    display: none;
+}
+
+.comment__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Name and time on one muted line, the text under it: the author is worth a
+   look, the clock is not worth a line of its own. */
+.comment__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--text-dim);
+}
+
+.comment__author {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.comment__time {
+    font-variant-numeric: tabular-nums;
+}
+
+.comment__body {
+    margin-top: var(--space-1);
+    font-size: var(--step-0);
+}
+
+/* The comment's own action row: the same heart and the same "..." menu as a
+   post's, one size down, tightened up under the text. */
+.comment-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+    font-size: var(--step--1);
+}
+
+.comment-actions form {
+    display: flex;
+    margin: 0;
+}
+
+/* The comment form sits where the next comment would: same column as the list
+   above it, with the picture that says whose comment it will be. */
+.comments-compose {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--glass-line);
 }
 
 /* Pagination --------------------------------------------------------------- */

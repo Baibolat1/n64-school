@@ -35,6 +35,7 @@
     'upload': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 9 5-5 5 5"/><path d="M12 4v12"/>',
     'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
     'info': '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    'more': '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
 } -%}
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
 {%- endmacro %}
@@ -50,8 +51,49 @@
 {% if image %}<img class="avatar avatar--img{% if size %} avatar--{{ size }}{% endif %}" src="{{ image }}" alt="" aria-hidden="true">{% else %}<span class="avatar{% if size %} avatar--{{ size }}{% endif %}" data-color="{{ avatar_index(pseudonym) }}" aria-hidden="true">{{ avatar_initial(pseudonym) }}</span>{% endif %}
 {%- endmacro %}
 
+{# The heart of a like toggle, used for a post and for a comment alike: the two
+   differ only in the address they post to. Both are forms with the same
+   handshake -- the same CSRF token, a ``next_url`` the route whitelists, and the
+   JSON twin of the same toggle in ``data-api`` -- so the script's ``likeHandler``
+   (which looks for ``.action--like`` inside the form it is given, not for a
+   particular form) drives both without knowing which one it has (see
+   app/static/app.js).
+
+   ``like_count`` is what everybody sees; ``is_liked`` fills the heart for the
+   student reading the page. The button wears two classes everywhere: the one the
+   script and the CSS agree on, and the compact size the action rows use. #}
+{% macro like_button(action, api, csrf_token, back, like_count=0, is_liked=False) %}
+<form method="post" action="{{ action }}" data-async="like" data-api="{{ api }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next_url" value="{{ back }}">
+    <button type="submit" aria-pressed="{{ 'true' if is_liked else 'false' }}"
+            class="action action--compact action--like{% if is_liked %} is-liked{% endif %}">
+        {{ icon('heart') }}
+        <span class="visually-hidden">{{ 'Убрать отметку «нравится»' if is_liked else 'Нравится' }}</span>
+        <span class="action__count">{{ like_count }}</span>
+    </button>
+</form>
+{%- endmacro %}
+
+{# The complaint link, folded into a "..." menu: the one action on a card that is
+   not a counter and has no number to show, so it does not deserve a full slot in
+   the row. It is a native <details> -- it opens with no script at all, and the
+   link inside is a real link to a real page; the script only closes it again on a
+   tap outside or Escape (see app/static/app.js). #}
+{% macro report_menu(url) %}
+<details class="menu">
+    <summary class="action action--compact action--more">
+        {{ icon('more') }}
+        <span class="visually-hidden">Ещё</span>
+    </summary>
+    <div class="menu-panel">
+        <a href="{{ url }}">Пожаловаться</a>
+    </div>
+</details>
+{%- endmacro %}
+
 {# The action row of a post: the like toggle, the comment counter and, when the
-   reader is not the author, the complaint link. It is a macro because the row
+   reader is not the author, the complaint menu. It is a macro because the row
    appears twice -- on a feed card and on the post's own page -- and the like is a
    form whose handshake must be identical in both: the same CSRF token and the
    same URL to come back to (``back``, one of the two the like route accepts, see
@@ -59,39 +101,43 @@
    imported macro does not see the render context, so ``csrf_token`` would be
    undefined inside here.
 
-   ``is_liked`` fills the heart for the student reading the page, and
-   ``like_count`` is what everybody sees. ``comment_count=None`` drops the
-   comment link, for the post's own page where it would only point at itself.
-   ``report_url`` the caller builds (or leaves out) because only it knows the
-   reader: complaining about one's own post is refused by the route as well.
-
-   The form also carries the JSON twin of the same toggle (``data-api``): with a
-   script the heart fills where it stands, and without one the same URL answers
-   with a page and comes back here -- ``back`` is exactly the address this card
-   is on (see app/static/app.js). #}
+   ``comment_count=None`` drops the comment link, for the post's own page where it
+   would only point at itself. ``report_url`` the caller builds (or leaves out)
+   because only it knows the reader: complaining about one's own post is refused
+   by the route as well. #}
 {% macro post_actions(post, csrf_token, back, like_count=0, is_liked=False,
                       comment_count=None, report_url=None) %}
 <div class="post-actions">
-    <form method="post" action="/feed/posts/{{ post.id }}/like"
-          data-async="like" data-api="/api/posts/{{ post.id }}/like">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="next_url" value="{{ back }}">
-        <button type="submit" aria-pressed="{{ 'true' if is_liked else 'false' }}"
-                class="action action--like{% if is_liked %} is-liked{% endif %}">
-            {{ icon('heart') }}
-            <span class="visually-hidden">{{ 'Убрать отметку «нравится»' if is_liked else 'Нравится' }}</span>
-            <span class="action__count">{{ like_count }}</span>
-        </button>
-    </form>
+    {{ like_button('/feed/posts/' ~ post.id ~ '/like',
+                   '/api/posts/' ~ post.id ~ '/like',
+                   csrf_token, back, like_count=like_count, is_liked=is_liked) }}
     {%- if comment_count is not none %}
-    <a class="action" href="/feed/posts/{{ post.id }}">
+    <a class="action action--compact" href="/feed/posts/{{ post.id }}">
         {{ icon('comment') }}
         <span class="visually-hidden">Комментарии</span>
         <span class="action__count">{{ comment_count }}</span>
     </a>
     {%- endif %}
     {%- if report_url %}
-    <a class="action" href="{{ report_url }}">Пожаловаться</a>
+    {{ report_menu(report_url) }}
+    {%- endif %}
+</div>
+{%- endmacro %}
+
+{# The action row of a comment: the same heart, one level down. ``back`` is the
+   post the comment hangs under -- the page the like returns to, and the only one
+   that shows it. The address is built from the comment's own ``post_id`` rather
+   than from a ``post`` in the context, because the partial that calls this is
+   also rendered on its own, with only the comment in hand (see app.routers.api).
+   ``report_url`` is None on your own comment, and the menu is left out. #}
+{% macro comment_actions(comment, csrf_token, back, like_count=0, is_liked=False,
+                         report_url=None) %}
+<div class="comment-actions">
+    {{ like_button('/feed/posts/' ~ comment.post_id ~ '/comments/' ~ comment.id ~ '/like',
+                   '/api/posts/' ~ comment.post_id ~ '/comments/' ~ comment.id ~ '/like',
+                   csrf_token, back, like_count=like_count, is_liked=is_liked) }}
+    {%- if report_url %}
+    {{ report_menu(report_url) }}
     {%- endif %}
 </div>
 {%- endmacro %}

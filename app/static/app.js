@@ -67,14 +67,16 @@
         const target = event.target;
         if (!target || !target.closest) return;
 
-        // The header's menu is a <details>, so it opens and closes with no
-        // script at all -- but a <details> that stays open while the reader
-        // taps the page next to it reads as stuck. Clicking anywhere outside
-        // closes it, and Escape closes it too (below); without this file the
-        // menu simply closes where it was opened.
-        document.querySelectorAll("details.burger[open]").forEach(function (menu) {
-            if (!menu.contains(target)) menu.removeAttribute("open");
-        });
+        // The header's menu and the "..." of a card are <details>, so they open
+        // and close with no script at all -- but a <details> that stays open
+        // while the reader taps the page next to it reads as stuck. Clicking
+        // anywhere outside closes it, and Escape closes it too (below); without
+        // this file the menu simply closes where it was opened.
+        document.querySelectorAll("details.burger[open], details.menu[open]").forEach(
+            function (menu) {
+                if (!menu.contains(target)) menu.removeAttribute("open");
+            }
+        );
 
         // The dev-apply button is a real link to a real page (/me/dev-apply)
         // *and* a dialog opener, and which one happens is decided right here:
@@ -124,14 +126,16 @@
         }
     });
 
-    // Escape closes the header menu. On a <dialog> the browser does this by
-    // itself -- that is one of the reasons the sheets are dialogs -- but a
-    // <details> has no idea the key exists.
+    // Escape closes the menus. On a <dialog> the browser does this by itself --
+    // that is one of the reasons the sheets are dialogs -- but a <details> has no
+    // idea the key exists.
     document.addEventListener("keydown", function (event) {
         if (event.key !== "Escape") return;
-        document.querySelectorAll("details.burger[open]").forEach(function (menu) {
-            menu.removeAttribute("open");
-        });
+        document.querySelectorAll("details.burger[open], details.menu[open]").forEach(
+            function (menu) {
+                menu.removeAttribute("open");
+            }
+        );
     });
 
     /* The round trip ------------------------------------------------------------ */
@@ -206,6 +210,51 @@
     function stale(form, sequence) {
         return String(sequence) !== form.dataset.sequence;
     }
+
+    /* One-line composers --------------------------------------------------------- */
+
+    // A composer is one line until there is a reason for more: the room a thought
+    // takes is borrowed from the lines it actually needs instead of being
+    // reserved by an empty box. Four is the ceiling -- past that the field
+    // scrolls, because a composer taller than the phone turns the post below it
+    // into a footnote.
+    const COMPOSER_ROWS = 4;
+
+    function growField(field) {
+        const style = window.getComputedStyle(field);
+        const line = parseFloat(style.lineHeight) || 20;
+        const chrome =
+            parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) +
+            parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+        const max = line * COMPOSER_ROWS + chrome;
+
+        // Measured from "auto", not from the current height: a field typed into
+        // and then emptied has to come back down, and scrollHeight of a fixed
+        // height is that same fixed height.
+        field.style.height = "auto";
+        const wanted = Math.min(field.scrollHeight, max);
+        field.style.height = Math.max(wanted, line + chrome) + "px";
+        field.style.overflowY = field.scrollHeight > max ? "auto" : "hidden";
+    }
+
+    // The send button follows the field: an empty composer has nothing to send.
+    // It is only ever disabled from here -- in the markup it is a plain button,
+    // so a browser that never runs this file keeps a form it can submit.
+    function syncComposer(form) {
+        const field = form.querySelector("[data-autogrow]");
+        if (!field) return;
+        growField(field);
+        const button = form.querySelector('button[type="submit"]');
+        if (button) button.disabled = field.value.trim() === "";
+    }
+
+    document.querySelectorAll("form").forEach(function (form) {
+        if (!form.querySelector("[data-autogrow]")) return;
+        form.querySelector("[data-autogrow]").addEventListener("input", function () {
+            syncComposer(form);
+        });
+        syncComposer(form);
+    });
 
     /* Likes --------------------------------------------------------------------- */
 
@@ -471,6 +520,12 @@
             })
             .then(function () {
                 if (button) button.disabled = false;
+                // A composer clears itself once it has published, and an empty
+                // field has nothing to send: here the send button is switched
+                // off again rather than left live over a blank line, and the
+                // field drops back to the one row it started as. A no-op for
+                // every form that is not a composer.
+                syncComposer(form);
             });
     });
 })();

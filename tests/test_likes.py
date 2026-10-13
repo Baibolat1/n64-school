@@ -1,11 +1,13 @@
-"""Tests for post likes: the toggle route, the counters and the constraints.
+"""Tests for likes: the toggles, the counters and the constraints.
 
-Two layers are covered on purpose. The route is driven through a real client --
-CSRF token, session, service, repository, database -- because that is the only
-way to see what a student actually gets. The table itself is checked directly as
-well, since the "one like per student per post" rule must hold even if two
-requests slip past each other: the guarantee is the unique constraint, not the
-read-then-write in the toggle.
+Both kinds are covered the same way, post likes and comment likes, because they
+are the same operation one table over (see app.services.likes). Two layers are
+covered on purpose. The routes are driven through a real client -- CSRF token,
+session, service, repository, database -- because that is the only way to see
+what a student actually gets. The tables are checked directly as well, since the
+"one like per student per thing" rule must hold even if two requests slip past
+each other: the guarantee is the unique constraint, not the read-then-write in
+the toggle.
 """
 
 import sys
@@ -23,9 +25,10 @@ from app.main import app  # noqa: E402
 from app.models.content import (  # noqa: E402
     CONTENT_STATUS_HIDDEN,
     CONTENT_STATUS_VISIBLE,
+    Comment,
     Post,
 )
-from app.models.like import PostLike  # noqa: E402
+from app.models.like import CommentLike, PostLike  # noqa: E402
 from app.models.student import Student  # noqa: E402
 from app.repositories import likes as likes_repo  # noqa: E402
 from app.services import likes as likes_service  # noqa: E402
@@ -33,6 +36,7 @@ from app.services import student_auth  # noqa: E402
 from tests.conftest import extract_csrf  # noqa: E402
 
 LIKE_URL = "/feed/posts/{post_id}/like"
+COMMENT_LIKE_URL = "/feed/posts/{post_id}/comments/{comment_id}/like"
 
 
 def _make_post(
@@ -62,9 +66,35 @@ def _make_student(session_factory, alias="Ученик-02"):
         return other.id
 
 
+def _make_comment(
+    session_factory,
+    post_id,
+    author_id,
+    body="Комментарий",
+    status=CONTENT_STATUS_VISIBLE,
+):
+    with session_factory() as db:
+        comment = Comment(
+            post_id=post_id,
+            author_id=author_id,
+            display_alias="Ученик-02",
+            is_anonymous=False,
+            body=body,
+            status=status,
+        )
+        db.add(comment)
+        db.commit()
+        return comment.id
+
+
 def _likes(session_factory):
     with session_factory() as db:
         return list(db.execute(select(PostLike)).scalars().all())
+
+
+def _comment_likes(session_factory):
+    with session_factory() as db:
+        return list(db.execute(select(CommentLike)).scalars().all())
 
 
 def _post_card_html(html: str, post_id: int) -> str:
@@ -72,12 +102,22 @@ def _post_card_html(html: str, post_id: int) -> str:
 
     A whole-page assertion would pass as soon as *any* card looked right, and the
     two cards look alike: the count and the filled heart have to be read off the
-    card of the post under test.
+    card of the post under test. The cut at ``</article>`` matters on the post's
+    own page, where the comments below the post carry hearts of the same shape.
     """
     for card in html.split('<article class="post-card">')[1:]:
         if f"/feed/posts/{post_id}/like" in card:
-            return card
+            return card.split("</article>")[0]
     raise AssertionError(f"no post card for post {post_id} in the page")
+
+
+def _comment_html(html: str, comment_id: int) -> str:
+    """The markup of one comment, nothing else -- the comment's own counter and
+    heart, not the post's and not the next comment's."""
+    for article in html.split('<article class="comment">')[1:]:
+        if f"/comments/{comment_id}/like" in article:
+            return article.split("</article>")[0]
+    raise AssertionError(f"no comment {comment_id} in the page")
 
 
 def test_liking_a_post_stores_the_like_and_returns_to_the_feed(student, session_factory):
@@ -265,20 +305,248 @@ def test_a_missing_next_url_lands_on_the_feed(student, session_factory):
     assert response.headers["location"] == "/feed"
 
 
-def test_comments_have_no_like_control(student, session_factory):
+def test_comments_carry_a_like_of_their_own(student, session_factory):
     post_id = _make_post(session_factory, student.student_id)
     page = f"/feed/posts/{post_id}"
     for body in ("Первый комментарий", "Второй комментарий"):
-        response = student.post(
-            f"{page}/comments", page, {"body": body}
-        )
+        response = student.post(f"{page}/comments", page, {"body": body})
         assert response.status_code == 303
 
     html = student.client.get(page).text
 
     assert html.count('class="comment"') == 2
-    # Exactly one heart on the page: the post's own. No likes on comments.
-    assert html.count("action--like") == 1
+    # Three hearts on the page: the post's own and one per comment.
+    assert html.count("action--like") == 3
+    for comment_id in (1, 2):
+        actions = _comment_html(html, comment_id)
+        assert f'data-api="/api/posts/{post_id}/comments/{comment_id}/like"' in actions
+
+
+# --- Likes on a comment --------------------------------------------------------
+
+
+def test_liking_a_comment_stores_the_like_and_comes_back_to_the_post(
+    student, session_factory
+):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+    page = f"/feed/posts/{post_id}"
+
+    response = student.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id),
+        page,
+        {"next_url": page},
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == page
+
+    likes = _comment_likes(session_factory)
+    assert len(likes) == 1
+    assert likes[0].student_id == student.student_id
+    assert likes[0].comment_id == comment_id
+    assert likes[0].created_at is not None
+
+
+def test_liking_a_comment_again_takes_the_like_back(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+    url = COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id)
+    student.post(url, f"/feed/posts/{post_id}", {"next_url": f"/feed/posts/{post_id}"})
+
+    response = student.post(
+        url, f"/feed/posts/{post_id}", {"next_url": f"/feed/posts/{post_id}"}
+    )
+
+    assert response.status_code == 303
+    assert _comment_likes(session_factory) == []
+
+
+def test_a_student_cannot_like_the_same_comment_twice(student, session_factory):
+    # As with posts, the database is what makes a double like impossible.
+    post_id = _make_post(session_factory, _make_student(session_factory))
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+
+    with session_factory() as db:
+        db.add(CommentLike(student_id=student.student_id, comment_id=comment_id))
+        db.commit()
+        db.add(CommentLike(student_id=student.student_id, comment_id=comment_id))
+        with pytest.raises(IntegrityError) as excinfo:
+            db.commit()
+
+    assert "UNIQUE constraint failed" in str(excinfo.value)
+    assert "comment_likes.student_id" in str(excinfo.value)
+    assert len(_comment_likes(session_factory)) == 1
+
+
+def test_the_comment_likes_table_has_the_unique_pair_and_the_lookup_indexes(
+    db_engine,
+):
+    inspector = inspect(db_engine)
+
+    unique = inspector.get_unique_constraints("comment_likes")
+    assert any(
+        constraint["column_names"] == ["student_id", "comment_id"]
+        and constraint["name"] == "uq_comment_likes_student_comment"
+        for constraint in unique
+    )
+
+    indexed = {
+        tuple(index["column_names"]) for index in inspector.get_indexes("comment_likes")
+    }
+    assert ("student_id",) in indexed
+    assert ("comment_id",) in indexed
+
+
+def test_the_comment_counter_and_the_filled_heart_appear_on_the_post_page(
+    student, session_factory
+):
+    post_id = _make_post(session_factory, student.student_id)
+    liked = _make_comment(session_factory, post_id, student.student_id, body="Первый")
+    other = _make_comment(session_factory, post_id, student.student_id, body="Второй")
+    student.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=liked),
+        f"/feed/posts/{post_id}",
+        {"next_url": f"/feed/posts/{post_id}"},
+    )
+
+    html = student.client.get(f"/feed/posts/{post_id}").text
+
+    mine = _comment_html(html, liked)
+    assert "action--like is-liked" in mine
+    assert 'aria-pressed="true"' in mine
+    assert '<span class="action__count">1</span>' in mine
+
+    # And the comment nobody liked keeps its hollow heart: the counters do not
+    # leak from one comment to the next any more than they do between posts.
+    theirs = _comment_html(html, other)
+    assert "action--like is-liked" not in theirs
+    assert '<span class="action__count">0</span>' in theirs
+
+
+def test_a_comment_like_does_not_fill_the_posts_heart(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+    student.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id),
+        f"/feed/posts/{post_id}",
+        {"next_url": f"/feed/posts/{post_id}"},
+    )
+
+    page = student.client.get(f"/feed/posts/{post_id}").text
+
+    # The two counters are two tables; liking a comment must not read as liking
+    # the post it hangs under.
+    card = _post_card_html(page, post_id)
+    assert "action--like is-liked" not in card
+    assert '<span class="action__count">0</span>' in card
+
+
+def test_a_comment_of_another_post_cannot_be_liked(student, session_factory):
+    mine = _make_post(session_factory, student.student_id)
+    other_post = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, other_post, student.student_id)
+
+    response = student.post(
+        COMMENT_LIKE_URL.format(post_id=mine, comment_id=comment_id),
+        "/feed",
+        {"next_url": "/feed"},
+    )
+
+    assert response.status_code == 404
+    assert _comment_likes(session_factory) == []
+
+
+def test_a_hidden_comment_cannot_be_liked(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(
+        session_factory, post_id, student.student_id, status=CONTENT_STATUS_HIDDEN
+    )
+
+    response = student.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id),
+        "/feed",
+        {"next_url": "/feed"},
+    )
+
+    assert response.status_code == 404
+    assert _comment_likes(session_factory) == []
+
+
+def test_an_unknown_comment_cannot_be_liked(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+
+    response = student.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=99999),
+        "/feed",
+        {"next_url": "/feed"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_a_comment_like_without_a_csrf_token_is_refused(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+    student.csrf_for("/feed")  # both cookies in place, only the field missing
+
+    response = student.client.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id),
+        data={"next_url": "/feed"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 403
+    assert _comment_likes(session_factory) == []
+
+
+def test_an_anonymous_visitor_cannot_like_a_comment(client, session_factory):
+    post_id = _make_post(session_factory, _make_student(session_factory))
+    comment_id = _make_comment(
+        session_factory, post_id, _make_student(session_factory, "Ученик-03")
+    )
+    token = extract_csrf(client.get("/login").text)
+
+    response = client.post(
+        COMMENT_LIKE_URL.format(post_id=post_id, comment_id=comment_id),
+        data={"csrf_token": token, "next_url": "/feed"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    assert _comment_likes(session_factory) == []
+
+
+def test_toggle_comment_like_reports_the_state_it_left(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+
+    with session_factory() as db:
+        me = db.get(Student, student.student_id)
+        comment = db.get(Comment, comment_id)
+        assert likes_service.toggle_comment_like(db, me, comment) is True
+        assert likes_service.toggle_comment_like(db, me, comment) is False
+
+    assert _comment_likes(session_factory) == []
+
+
+def test_comment_counts_and_liked_ids_are_batched(session_factory, student):
+    post_id = _make_post(session_factory, student.student_id)
+    liked = _make_comment(session_factory, post_id, student.student_id, body="Первый")
+    other = _make_comment(session_factory, post_id, student.student_id, body="Второй")
+    with session_factory() as db:
+        db.add(CommentLike(student_id=student.student_id, comment_id=liked))
+        db.commit()
+
+    with session_factory() as db:
+        assert likes_repo.count_likes_by_comment(db, [liked, other]) == {liked: 1}
+        assert likes_repo.count_likes_by_comment(db, []) == {}
+        assert likes_repo.liked_comment_ids(
+            db, student.student_id, [liked, other]
+        ) == {liked}
+        assert likes_repo.liked_comment_ids(db, student.student_id, []) == set()
+        assert likes_repo.get_comment_like(db, student.student_id, other) is None
 
 
 def test_a_hidden_post_cannot_be_liked(student, session_factory):

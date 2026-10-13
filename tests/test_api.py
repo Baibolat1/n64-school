@@ -21,10 +21,32 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.models.content import (  # noqa: E402
     CONTENT_STATUS_HIDDEN,
     CONTENT_STATUS_VISIBLE,
+    Comment,
     Post,
 )
 from app.models.student import Student  # noqa: E402
 from tests.conftest import extract_csrf  # noqa: E402
+
+
+def _make_comment(
+    session_factory,
+    post_id,
+    author_id,
+    body="Комментарий",
+    status=CONTENT_STATUS_VISIBLE,
+) -> int:
+    with session_factory() as db:
+        comment = Comment(
+            post_id=post_id,
+            author_id=author_id,
+            display_alias="Ученик-01",
+            is_anonymous=False,
+            body=body,
+            status=status,
+        )
+        db.add(comment)
+        db.commit()
+        return comment.id
 
 
 def _make_post(
@@ -146,6 +168,34 @@ def test_the_reloaded_feed_agrees_with_the_toggle(student, session_factory):
     card = _card(student.client.get("/feed").text, post_id)
     assert f'data-api="/api/posts/{post_id}/like"' in card
     assert 'aria-pressed="true"' in card
+
+
+def test_a_comment_like_toggles_through_the_same_answer(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, post_id, student.student_id)
+    url = f"/api/posts/{post_id}/comments/{comment_id}/like"
+
+    first = student.post(url, f"/feed/posts/{post_id}", {})
+    assert first.status_code == 200
+    assert first.json() == {"ok": True, "liked": True, "count": 1}
+
+    second = student.post(url, f"/feed/posts/{post_id}", {})
+    assert second.json() == {"ok": True, "liked": False, "count": 0}
+
+
+def test_a_comment_of_another_post_is_a_json_404(student, session_factory):
+    post_id = _make_post(session_factory, student.student_id)
+    other_post = _make_post(session_factory, student.student_id)
+    comment_id = _make_comment(session_factory, other_post, student.student_id)
+
+    response = student.post(
+        f"/api/posts/{post_id}/comments/{comment_id}/like", "/feed", {}
+    )
+
+    # The pair in the URL has to make sense: a comment addressed through the
+    # wrong post is not found, exactly as it is by the HTML route.
+    assert response.status_code == 404
+    assert response.json()["ok"] is False
 
 
 # --- Publishing ---------------------------------------------------------------

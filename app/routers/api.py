@@ -192,9 +192,43 @@ def create_comment(
         comment=comment,
         avatar_keys=students_repo.avatar_keys_by_id(db, [comment.author_id]),
         student=student,
+        # A comment that has just been written cannot have been liked yet, by
+        # anybody: the partial asks for both and renders an empty heart.
+        comment_like_counts={},
+        liked_comment_ids=set(),
     )
     total = comments_repo.count_visible_comments(db, post.id)
     return _ok(html=html, count=total)
+
+
+@router.post("/posts/{post_id}/comments/{comment_id}/like")
+def toggle_comment_like(
+    post_id: int,
+    comment_id: int,
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Toggle the like on a comment, one level down from the post's own.
+
+    The same shape as :func:`toggle_like` -- the state after the call plus the
+    counter to reconcile against -- and the same two lookups as the HTML route,
+    so a comment of another post or a hidden one is a 404 the script can show
+    rather than a heart that fills for something the page does not display.
+    """
+    post = _visible_post(db, post_id)
+    if post is None:
+        return _no("Пост не найден", status.HTTP_404_NOT_FOUND)
+    comment = comments_repo.get_comment(db, comment_id)
+    if (
+        comment is None
+        or comment.post_id != post_id
+        or comment.status != CONTENT_STATUS_VISIBLE
+    ):
+        return _no("Комментарий не найден", status.HTTP_404_NOT_FOUND)
+
+    liked = likes_service.toggle_comment_like(db, student, comment)
+    count = likes_repo.count_likes_by_comment(db, [comment_id]).get(comment_id, 0)
+    return _ok(liked=liked, count=count)
 
 
 @router.post("/assistant")

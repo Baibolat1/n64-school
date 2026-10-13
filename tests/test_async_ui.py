@@ -113,6 +113,47 @@ def test_the_post_page_comments_without_reloading(student, session_factory):
     assert 'id="comments-count"' in html
 
 
+def _comment_id(session_factory, post_id, student_id) -> int:
+    from app.models.content import Comment
+
+    with session_factory() as db:
+        comment = Comment(
+            post_id=post_id,
+            author_id=student_id,
+            display_alias="Ученик-01",
+            is_anonymous=False,
+            body="Комментарий",
+        )
+        db.add(comment)
+        db.commit()
+        return comment.id
+
+
+def test_the_heart_under_a_comment_posts_to_its_own_address(student, session_factory):
+    """The comment's like is the post's like, one level down.
+
+    The script's likeHandler finds the button inside whichever form it is given,
+    so what has to hold is the same contract the post's own heart keeps: a JSON
+    twin under /api and a real page behind the form -- the post the comment hangs
+    under, which is exactly where the like comes back to.
+    """
+    post_id = _post_id(session_factory, student.student_id)
+    comment_id = _comment_id(session_factory, post_id, student.student_id)
+    html = student.client.get(f"/feed/posts/{post_id}").text
+
+    likes = [form for form in _async_forms(html) if _attr(form, "data-async") == "like"]
+    assert len(likes) == 2, "the post's own heart and the one under the comment"
+    heart = next(form for form in likes if f"/comments/{comment_id}/like" in form)
+
+    _assert_async_form(heart, "like")
+    assert (
+        _attr(heart, "data-api")
+        == f"/api/posts/{post_id}/comments/{comment_id}/like"
+    )
+    assert _attr(heart, "action") == f"/feed/posts/{post_id}/comments/{comment_id}/like"
+    assert f'name="next_url" value="/feed/posts/{post_id}"' in heart
+
+
 def test_the_assistant_asks_without_reloading(student):
     html = student.client.get("/assistant").text
 
