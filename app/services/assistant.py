@@ -4,7 +4,7 @@
 Сначала вопрос разбирается по базе школы (расписание, домашка, учителя,
 турниры) -- это бесплатно, мгновенно и не отправляет никуда ни строчки
 ученика. Только если база ответить не может *и* в настройках лежит ключ,
-тот же вопрос уходит в модель (Claude или DeepSeek -- что настроено).
+тот же вопрос уходит в модель (Claude, OpenAI или DeepSeek -- что настроено).
 
 Что важно и чего здесь сознательно нет:
 
@@ -251,20 +251,40 @@ class LlmUnavailable(Exception):
 
 
 def llm_configured() -> bool:
-    return bool(settings.ANTHROPIC_API_KEY or settings.DEEPSEEK_API_KEY)
+    return bool(
+        settings.ANTHROPIC_API_KEY
+        or settings.OPENAI_API_KEY
+        or settings.DEEPSEEK_API_KEY
+    )
 
 
 def ask_llm(question: str, context: str) -> str:
-    """Спросить модель. Claude -- если есть его ключ, иначе DeepSeek.
+    """Спросить модель. Claude, затем OpenAI, затем DeepSeek.
 
-    Оба вызова идут сырым HTTP через httpx: SDK Anthropic покрывает только
-    Anthropic, а нам нужен один и тот же код на двух провайдеров, один из
-    которых OpenAI-совместим.
+    Все три вызова идут сырым HTTP через httpx: SDK Anthropic покрывает только
+    Anthropic, а OpenAI и DeepSeek говорят на одном и том же протоколе
+    (chat/completions), поэтому у них общий код и разные адрес, ключ и модель.
+    Порядок -- порядок объявления ключей в настройках: побеждает первый
+    заполненный, чтобы владелец сайта управлял выбором из .env, а не из кода.
     """
     if settings.ANTHROPIC_API_KEY:
         return _ask_anthropic(question, context)
+    if settings.OPENAI_API_KEY:
+        return _ask_openai_compatible(
+            url="https://api.openai.com/v1/chat/completions",
+            api_key=settings.OPENAI_API_KEY,
+            model=settings.OPENAI_MODEL,
+            question=question,
+            context=context,
+        )
     if settings.DEEPSEEK_API_KEY:
-        return _ask_deepseek(question, context)
+        return _ask_openai_compatible(
+            url="https://api.deepseek.com/chat/completions",
+            api_key=settings.DEEPSEEK_API_KEY,
+            model=settings.DEEPSEEK_MODEL,
+            question=question,
+            context=context,
+        )
     raise LlmUnavailable()
 
 
@@ -300,9 +320,17 @@ def _ask_anthropic(question: str, context: str) -> str:
     return text.strip()
 
 
-def _ask_deepseek(question: str, context: str) -> str:
+def _ask_openai_compatible(
+    *, url: str, api_key: str, model: str, question: str, context: str
+) -> str:
+    """Один вызов chat/completions -- для OpenAI и DeepSeek.
+
+    У них общий протокол, поэтому и код общий: различаются только адрес, ключ
+    и идентификатор модели. Тело ответа читается одинаково, и ни то, ни другое
+    в лог не попадает.
+    """
     payload = {
-        "model": settings.DEEPSEEK_MODEL,
+        "model": model,
         "max_tokens": settings.ASSISTANT_MAX_TOKENS,
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
@@ -313,9 +341,9 @@ def _ask_deepseek(question: str, context: str) -> str:
         ],
     }
     response = httpx.post(
-        "https://api.deepseek.com/chat/completions",
+        url,
         headers={
-            "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "content-type": "application/json",
         },
         json=payload,

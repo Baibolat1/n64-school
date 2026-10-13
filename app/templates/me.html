@@ -2,20 +2,71 @@
 {% import "_macros.html" as ui %}
 {% block title %}Мой профиль{% endblock %}
 {% block content %}
+{# Профиль — это то, кто ты, а не то, что ты настраиваешь: на экране только
+   карточка ученика, приглашение в команду, вход в настройки и выход. Галерея
+   аватарок и смена псевдонима уехали в отдельное окно (/me/settings), потому
+   что тринадцать кружков и поле ввода — это форма, а форма посреди профиля
+   прячет от ученика всё остальное (см. app.routers.auth). #}
 <header class="profile-hero">
-    {{ ui.avatar(student.alias, 'lg', student.avatar_key) }}
+    <div class="profile-photo">
+        {{ ui.avatar(student.alias, 'xl', student.avatar_key) }}
+    </div>
     <div class="profile-hero-text">
         <p class="eyebrow">Профиль</p>
-        <h1>{{ student.alias }}</h1>
+        {# Псевдоним в заголовке называет место, которое правит скрипт после
+           смены псевдонима без перезагрузки (см. app/static/app.js). #}
+        <h1 id="profile-alias">{{ student.alias }}</h1>
         <p class="muted">
             {% if student.class_name %}Класс {{ student.class_name }} · {% endif %}анонимно для остальных
         </p>
+        {# Загрузки фотографий пока нет, и кнопка об этом говорит вслух. Молчащая
+           кнопка («нажал — ничего») хуже, чем честный отказ: ученик ищет
+           сломанное у себя, а не читает, что этого ещё нет. #}
+        <button type="button" class="btn btn--ghost"
+                data-toast="Загрузка фотографий пока в разработке — аватарку можно выбрать в настройках"
+                data-toast-kind="info">
+            {{ ui.icon('camera') }} Загрузить фото
+        </button>
     </div>
 </header>
 
-{# Один слот отказа на всю страницу: обе формы ниже возвращаются сюда и на
-   успехе, и на отказе, поэтому сообщение не принадлежит ни одной из секций. #}
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{# Слота отказа здесь нет: у профиля больше нет своих форм. Отказ по заявке
+   возвращается на страницу заявки, отказ по настройкам — на /me/settings, и
+   каждая форма сама показывает своё сообщение (см. app.routers.auth). #}
+
+{# Команда разработки. Карточка стоит сразу под профилем: это приглашение, а
+   не настройка, и место ей — там, где ученик только что прочитал, кто он на
+   сайте. Заявка одна на ученика: повторная отправка обновляет прежнюю, поэтому
+   состояние «уже отправлена» показывается вместо обещания, что она вторая. #}
+<section class="glass team-card">
+    <h2>{{ ui.icon('code') }} Разработка n64hub</h2>
+    <p>Хочешь развивать школьную платформу вместе с нами?</p>
+    {% if application %}
+    <p class="hint">Ваша заявка: {{ role_labels.get(application.role, application.role) }},
+        {{ application.contact }}. Мы напишем в Telegram — отправка ещё раз обновит её.</p>
+    {% endif %}
+    {# Ссылка и открыватель окна в одном элементе: со скриптом открывается
+       <dialog>, без него — настоящая страница /me/dev-apply (см. app/static/app.js). #}
+    <a class="btn" href="/me/dev-apply" data-dialog-open="dev-apply">
+        {{ ui.icon('upload') }} Подать заявку в команду
+    </a>
+</section>
+
+{# Настройки: псевдоним и аватарка. Здесь только вход — сами формы лежат в
+   окне ниже, и ту же пару отдаёт отдельная страница /me/settings, так что без
+   скрипта ссылка ведёт на неё (см. app/static/app.js). #}
+<section class="glass settings-card">
+    <h2>{{ ui.icon('settings') }} Настройки</h2>
+    <p>Псевдоним и аватарка. Псевдоним виден всем в ленте, аватарка — рядом с
+        ним; фотография с телефона не загружается, картинку выбирают из галереи.</p>
+    {% if not can_change %}
+    <p class="hint">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
+        Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
+    {% endif %}
+    <a class="btn btn--ghost" href="/me/settings" data-dialog-open="settings">
+        {{ ui.icon('settings') }} Открыть настройки
+    </a>
+</section>
 
 {% if badges %}
 <section class="glass">
@@ -48,49 +99,6 @@
 </section>
 
 <section class="glass">
-    <div class="hero-head">{{ ui.icon('user') }}<h2>Сменить псевдоним</h2></div>
-    {% if can_change %}
-    <form method="post" action="/me/alias" class="stacked-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label for="new_alias">Новый псевдоним</label>
-        <input id="new_alias" name="new_alias" type="text" maxlength="24"
-               autocomplete="off" value="{{ alias_value }}" required>
-
-        <button type="submit">Сохранить</button>
-    </form>
-    {% else %}
-    <p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
-        Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
-    {% endif %}
-</section>
-
-<section class="glass">
-    <div class="hero-head">{{ ui.icon('user') }}<h2>Аватарка</h2></div>
-    <p class="hint">Картинка показывается рядом с псевдонимом в ленте, на странице поста
-        и в отзывах. Менять её можно сколько угодно раз. Под анонимными записями
-        картинка не показывается: там всегда кружок.</p>
-
-    <form method="post" action="/me/avatar">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <div class="avatar-picker">
-            <label class="avatar-option">
-                <input type="radio" name="avatar_key" value=""{% if not student.avatar_key %} checked{% endif %}>
-                {{ ui.avatar(student.alias, 'lg', None) }}
-                <span class="visually-hidden">Без картинки</span>
-            </label>
-            {% for key in avatar_options() %}
-            <label class="avatar-option">
-                <input type="radio" name="avatar_key" value="{{ key }}"{% if student.avatar_key == key %} checked{% endif %}>
-                {{ ui.avatar(student.alias, 'lg', key) }}
-                <span class="visually-hidden">{{ avatar_label(key) }}</span>
-            </label>
-            {% endfor %}
-        </div>
-        <button type="submit">Сохранить</button>
-    </form>
-</section>
-
-<section class="glass">
     <div class="hero-head">{{ ui.icon('logout') }}<h2>Выход</h2></div>
     <p class="hint">Вы остаётесь в системе на этом устройстве, пока не выйдете сами.</p>
     <form method="post" action="/logout">
@@ -98,4 +106,34 @@
         <button type="submit" class="link-button">{{ ui.icon('logout') }} Выйти</button>
     </form>
 </section>
+
+{# Окно настроек. Нативный <dialog>: браузер сам рисует его поверх страницы,
+   сам закрывает по Escape и сам убирает остальную страницу из обхода с
+   клавиатуры — ни одно из этого позиционированный <div> не получает без
+   скрипта, который воюет с браузером. Открывается showModal() (см.
+   app/static/app.js), поэтому без скрипта окно просто не показывается, а
+   ссылка выше ведёт на отдельную страницу /me/settings с теми же формами.
+   Формы отсюда — ровно те же, что и там: обе стороны включают один партиал. #}
+<dialog class="sheet" id="settings" aria-labelledby="settings-title">
+    <div class="sheet-head">
+        <h2 id="settings-title">Настройки</h2>
+        <button type="button" class="btn btn--icon" data-dialog-close
+                aria-label="Закрыть">{{ ui.icon('close') }}</button>
+    </div>
+    <div class="sheet-body">
+        {% include "_settings_forms.html" %}
+    </div>
+</dialog>
+
+{# Окно заявки. #}
+<dialog class="sheet" id="dev-apply" aria-labelledby="dev-apply-title">
+    <div class="sheet-head">
+        <h2 id="dev-apply-title">Заявка в команду</h2>
+        <button type="button" class="btn btn--icon" data-dialog-close
+                aria-label="Закрыть">{{ ui.icon('close') }}</button>
+    </div>
+    <div class="sheet-body">
+        {% include "_dev_apply_form.html" %}
+    </div>
+</dialog>
 {% endblock %}

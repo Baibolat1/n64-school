@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Заявки в команду{% endblock %}
+{% block content %}
+{% include "admin/_nav.html" %}
+<section class="card">
+<h1>Заявки в команду</h1>
+<p><a href="/admin">&larr; В панель администратора</a></p>
+
+{% if applications %}
+<div class="table-scroll">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Ученик</th>
+            <th>Роль</th>
+            <th>Telegram</th>
+            <th>Обновлена</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for application in applications %}
+        <tr>
+            <td><a href="/admin/students/{{ application.student_id }}">{{ aliases.get(application.student_id, 'Ученик') }}</a></td>
+            <td>{{ role_label(application.role) }}</td>
+            <td>{{ application.contact }}</td>
+            <td>{{ application.updated_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<p class="hint">Одна заявка на ученика: отправка ещё раз заменяет прежнюю, поэтому
+    сроков здесь нет — только последнее слово.</p>
+{% else %}
+<p class="muted">Заявок пока нет.</p>
+{% endif %}
+</section>
+{% endblock %}

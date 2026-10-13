@@ -30,6 +30,11 @@
     'send': '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     'medal': '<path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/>',
     'flame': '<path d="M12 2c1 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1.5.5-2.5 1-3-2 1.5-3 3.5-3 6a6 6 0 0 0 12 0c0-4.5-4-6-6-11Z"/>',
+    'camera': '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/>',
+    'code': '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+    'upload': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 9 5-5 5 5"/><path d="M12 4v12"/>',
+    'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+    'info': '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
 } -%}
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>{{ _paths.get(name, '') | safe }}</svg>
 {%- endmacro %}
@@ -58,11 +63,17 @@
    ``like_count`` is what everybody sees. ``comment_count=None`` drops the
    comment link, for the post's own page where it would only point at itself.
    ``report_url`` the caller builds (or leaves out) because only it knows the
-   reader: complaining about one's own post is refused by the route as well. #}
+   reader: complaining about one's own post is refused by the route as well.
+
+   The form also carries the JSON twin of the same toggle (``data-api``): with a
+   script the heart fills where it stands, and without one the same URL answers
+   with a page and comes back here -- ``back`` is exactly the address this card
+   is on (see app/static/app.js). #}
 {% macro post_actions(post, csrf_token, back, like_count=0, is_liked=False,
                       comment_count=None, report_url=None) %}
 <div class="post-actions">
-    <form method="post" action="/feed/posts/{{ post.id }}/like">
+    <form method="post" action="/feed/posts/{{ post.id }}/like"
+          data-async="like" data-api="/api/posts/{{ post.id }}/like">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="next_url" value="{{ back }}">
         <button type="submit" aria-pressed="{{ 'true' if is_liked else 'false' }}"

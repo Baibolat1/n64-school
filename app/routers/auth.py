@@ -24,6 +24,7 @@ from app.services import invites as invites_service
 from app.services import login_throttle
 from app.services import registration
 from app.services import student_auth
+from app.services import team as team_service
 
 # ``require_csrf`` covers the login form too, so a third-party page cannot sign
 # a visitor in with a code of its choosing (or trigger a logout).
@@ -145,25 +146,12 @@ def logout_submit() -> RedirectResponse:
 
 
 def _alias_error_message(result: aliases_service.AliasChangeResult) -> str:
-    """Human-readable refusal message for a failed alias change."""
-    reason = result.reason
-    if reason is aliases_service.AliasError.TAKEN:
-        return "Псевдоним занят"
-    if reason is aliases_service.AliasError.TOO_SHORT:
-        return "Слишком короткий: минимум 3 символа"
-    if reason is aliases_service.AliasError.TOO_LONG:
-        return "Слишком длинный: максимум 24 символа"
-    if reason is aliases_service.AliasError.LEADING_DIGIT:
-        return "Псевдоним не может начинаться с цифры"
-    if reason is aliases_service.AliasError.INVALID_CHARS:
-        return "Недопустимые символы: буквы, цифры, пробел, дефис и подчёркивание"
-    if reason is aliases_service.AliasError.RESERVED:
-        return "Такое имя использовать нельзя"
-    if reason is aliases_service.AliasError.COOLDOWN:
-        days = settings.ALIAS_CHANGE_COOLDOWN_DAYS
-        when = result.retry_at.strftime("%d.%m.%Y") if result.retry_at else "позже"
-        return f"Псевдоним можно менять раз в {days} дней. Следующая попытка — {when}"
-    return "Не удалось изменить псевдоним"
+    """Human-readable refusal message for a failed alias change.
+
+    The wording lives in the service, not here: the async endpoint refuses the
+    same changes and has to say the same thing (see app.services.aliases).
+    """
+    return aliases_service.refusal_message(result)
 
 
 def _avatar_error_message(result: avatars_service.AvatarChangeResult) -> str:
@@ -173,14 +161,14 @@ def _avatar_error_message(result: avatars_service.AvatarChangeResult) -> str:
     return "Не удалось изменить аватарку"
 
 
-def _render_me(
-    request: Request,
-    student: Student,
-    db: Session,
-    *,
-    error: str | None = None,
-    alias_value: str | None = None,
-) -> Response:
+def _render_me(request: Request, student: Student, db: Session) -> Response:
+    """The profile: who the student is, and the way into everything else.
+
+    It carries no forms of its own any more -- the two settings forms are
+    included for the sheet (see ``_render_settings`` for the page behind it) --
+    which is why it takes neither a message nor a value to echo: a refusal
+    belongs to the page that shows the field it was about.
+    """
     can_change, retry_at = aliases_service.can_change_alias(student)
     # The profile shows the esports awards the student has won: two batched
     # reads (their badges, then the tournaments those badges point at), not one
@@ -197,15 +185,19 @@ def _render_me(
             "can_change": can_change,
             "retry_at": retry_at,
             "cooldown_days": settings.ALIAS_CHANGE_COOLDOWN_DAYS,
-            "error": error,
             "badges": badges,
             "badge_tournaments": badge_tournaments,
             "badge_label": esports_service.badge_label,
             "game_label": esports_service.game_label,
-            # Echo the submitted text back on error so it need not be retyped.
-            "alias_value": (
-                alias_value if alias_value is not None else student.alias
-            ),
+            # The dev-team card: the application already sent (one row per
+            # student, so this is the whole story) and the choices the form
+            # offers, taken from the service rather than spelled out here.
+            "application": team_service.get_for_student(db, student.id),
+            "roles": team_service.ROLES,
+            "role_labels": team_service.ROLE_LABELS,
+            # The settings sheet below is the same partial /me/settings renders,
+            # so it needs the field's current value here too.
+            "alias_value": student.alias,
         },
     )
 
@@ -219,6 +211,46 @@ def me(
     return _render_me(request, student, db)
 
 
+def _render_settings(
+    request: Request,
+    student: Student,
+    *,
+    error: str | None = None,
+    alias_value: str | None = None,
+) -> Response:
+    """The settings forms as a page of their own.
+
+    It exists for the browser without JavaScript -- on /me the card opens a
+    <dialog>, and a dialog that never opens would leave the link dead -- but it
+    is a real page for everybody: it can be linked, reloaded and reached
+    directly. Both sides include the same partial, so the two can never show
+    different fields or post to different routes.
+    """
+    can_change, retry_at = aliases_service.can_change_alias(student)
+    return templates.TemplateResponse(
+        request,
+        "settings.html",
+        {
+            "student": student,
+            "can_change": can_change,
+            "retry_at": retry_at,
+            "cooldown_days": settings.ALIAS_CHANGE_COOLDOWN_DAYS,
+            "error": error,
+            "alias_value": (
+                alias_value if alias_value is not None else student.alias
+            ),
+        },
+    )
+
+
+@router.get("/me/settings", response_class=HTMLResponse)
+def settings_page(
+    request: Request,
+    student: Student = Depends(require_not_banned),
+) -> Response:
+    return _render_settings(request, student)
+
+
 @router.post("/me/alias", response_class=HTMLResponse)
 def change_alias(
     request: Request,
@@ -230,10 +262,12 @@ def change_alias(
     if result.ok:
         # Post/Redirect/Get: a reload will not resubmit the form.
         return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_me(
+    # A refusal comes back to the page that carries the field, not to the
+    # profile: the profile shows no form any more, and a message about a field
+    # that is not on screen is a message about nothing.
+    return _render_settings(
         request,
         student,
-        db,
         error=_alias_error_message(result),
         alias_value=result.alias,
     )
@@ -250,4 +284,70 @@ def change_avatar(
     if result.ok:
         # Post/Redirect/Get: a reload will not resubmit the form.
         return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_me(request, student, db, error=_avatar_error_message(result))
+    return _render_settings(request, student, error=_avatar_error_message(result))
+
+
+def _render_dev_apply(
+    request: Request,
+    student: Student,
+    db: Session,
+    *,
+    error: str | None = None,
+    role: str = "",
+    contact: str = "",
+) -> Response:
+    """The application form as a page of its own.
+
+    It exists for the browser without JavaScript -- on /me the button opens a
+    <dialog>, and a dialog that never opens would leave it dead -- but it is a
+    real page for everybody: it can be linked, reloaded and reached directly,
+    and after a successful send it goes back to the profile, where the card
+    already shows the application that was just stored.
+    """
+    return templates.TemplateResponse(
+        request,
+        "dev_apply.html",
+        {
+            "student": student,
+            "roles": team_service.ROLES,
+            "role_labels": team_service.ROLE_LABELS,
+            "role_value": role,
+            "contact_value": contact,
+            "error": error,
+        },
+    )
+
+
+@router.get("/me/dev-apply", response_class=HTMLResponse)
+def dev_apply_form(
+    request: Request,
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    return _render_dev_apply(request, student, db)
+
+
+@router.post("/me/dev-applications", response_class=HTMLResponse)
+def submit_dev_application(
+    request: Request,
+    role: Annotated[str, Form()] = "",
+    contact: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Take an application to the development team.
+
+    Post/Redirect/Get on success like every other write; on a refusal the form
+    comes back with what was typed in it and the sentence the service wrote.
+    """
+    result = team_service.submit_application(db, student, role, contact)
+    if result.ok:
+        return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
+    return _render_dev_apply(
+        request,
+        student,
+        db,
+        error=team_service.refusal_message(result),
+        role=role,
+        contact=result.contact,
+    )

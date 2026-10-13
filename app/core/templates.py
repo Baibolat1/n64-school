@@ -3,8 +3,10 @@
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from app.config import settings
+from app.core import markdown
 from app.core.avatars import (
     avatar_image_key,
     avatar_label,
@@ -37,6 +39,13 @@ templates.env.globals.update(
     avatar_options=avatar_options,
     avatar_label=avatar_label,
 )
+
+# Markdown is a global rather than a filter, and it returns Markup: the answer
+# is rendered to HTML by a function whose whole job is to escape first and put
+# tags in afterwards (app.core.markdown), so the template marks the result safe
+# in the one place the escaping happened. `|safe` at a call site would move that
+# promise to every template that shows an answer.
+templates.env.globals.update(markdown=lambda text: Markup(markdown.render(text or "")))
 
 # The input caps are globals too, so a form can render its own ``maxlength``
 # without the router having to reach into settings and pass them in context.

@@ -25,35 +25,27 @@
 </article>
 
 <section class="comments">
-    <h2>Комментарии ({{ comments|length }})</h2>
-    {% if comments %}
+    {# Счётчик в заголовке и список ниже — обе точки, которые правит скрипт,
+       добавив комментарий: число берётся из ответа сервера, а не считается
+       здесь ещё раз (см. app/static/app.js). #}
+    <h2>Комментарии (<span id="comments-count">{{ comments|length }}</span>)</h2>
+    <div id="comments">
         {% for comment in comments %}
-        <article class="comment">
-            <div class="post-meta">
-                {{ ui.avatar(comment.display_alias, 'sm', avatar_keys.get(comment.author_id)) }}
-                <span class="post-author">{{ comment.display_alias }}</span>
-                <time datetime="{{ comment.created_at.isoformat() }}">
-                    {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
-                </time>
-            </div>
-            <p class="comment-body">{{ comment.body }}</p>
-            {% if student.id != comment.author_id %}
-            <p class="post-footer">
-                <a href="/report/comment/{{ comment.id }}">Пожаловаться</a>
-            </p>
-            {% endif %}
-        </article>
+            {% include "_comment.html" %}
         {% endfor %}
-    {% else %}
-        <p class="muted">Комментариев пока нет.</p>
-    {% endif %}
+        {% if not comments %}
+        <p class="muted" data-comments-empty>Комментариев пока нет.</p>
+        {% endif %}
+    </div>
 </section>
 
 <section class="card">
     <h2>Оставить комментарий</h2>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <p class="error" role="alert" data-error-slot hidden></p>
     <form method="post" action="/feed/posts/{{ post.id }}/comments"
-          class="stacked-form">
+          class="stacked-form"
+          data-async="comment" data-api="/api/posts/{{ post.id }}/comments">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <label for="comment-body">Текст</label>
         <textarea id="comment-body" name="body" rows="3" maxlength="2000"

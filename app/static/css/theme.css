@@ -2,51 +2,108 @@
    Theme foundation: design tokens, self-hosted webfonts, reset and base
    typography. Loaded first, before layout.css and components.css.
 
-   The look is "liquid glass": a deep, slightly blue night background with a few
-   soft colour lights behind it, and every panel is a sheet of frosted glass
-   laid over that background. The glass only reads as glass if there is
-   something behind it to blur, which is why the lights live on the body itself
-   (see layout.css, ``.app-lights``) and not on the cards.
+   The look is "liquid glass" in the Apple sense: an obsidian background --
+   nearly black, faintly warm -- with a wide, slow mesh of colour drifting
+   behind it, and every surface a thin sheet of frosted white glass laid over
+   that. Surfaces are built from *white at low opacity* rather than from a
+   tinted fill, which is what keeps a dark interface from turning muddy: 4% of
+   white over black is a card, 10% is a button, 20% is a hairline.
+
+   Colour is spent the way iOS spends it: one system blue for the things the
+   reader acts on, and a few muted system tones for state. No blue gradient
+   fills anything: a control says "press me" with its glass and its weight, not
+   with saturation. The glass only reads as glass if there is something behind
+   it to blur, which is why the mesh lives on the body itself (see layout.css)
+   and not on the cards.
    ========================================================================== */
 
 :root {
     color-scheme: dark;
 
     /* Palette -------------------------------------------------------------- */
-    --bg: #04060d;              /* near-black with a blue cast: page background */
-    --bg-deep: #070b14;         /* nav bars and recessed surfaces */
-    --bg-lift: #0b1120;         /* one step up, for gaps between panels */
-    --surface-1: #111827;       /* opaque card, where blur is not wanted */
-    --surface-2: #18202f;       /* nested layer: inputs, chips */
+    --bg: #09090b;              /* obsidian: the page, the way an iPhone is dark */
+    --bg-deep: #050506;         /* nav bars and recessed surfaces */
+    --bg-lift: #131316;         /* one step up, for gaps between panels */
+    --surface-1: #141416;       /* opaque card, where blur is not wanted */
+    --surface-2: #1d1d20;       /* nested layer: inputs, chips */
 
-    /* Glass. Three strengths, because the same 55% wash reads very differently
-       on a wide desktop panel and on a phone panel that covers the screen. */
-    --glass: rgba(21, 27, 45, .55);
-    --glass-strong: rgba(13, 18, 32, .72);
-    --glass-soft: rgba(27, 34, 56, .42);
-    --glass-line: rgba(255, 255, 255, .10);
+    /* Glass. Everything translucent is white at an alpha, so the two strengths
+       below are one material at two thicknesses: a card at 4%, a nested sheet
+       at 3%. The bars are the exception -- see --dock just below, where the
+       header and the dock are built out of the same wash, and --bar-strong,
+       which a scrolled header closes up into. */
+    --glass: rgba(255, 255, 255, .04);
+    --glass-strong: rgba(22, 22, 25, .72);
+    --glass-soft: rgba(255, 255, 255, .03);
+    /* A lid, not a pane. While the page is still the bar shows the lights
+       through it (--dock); the moment text starts scrolling underneath there is
+       something to read against, and only thickness holds it back. Kept at the
+       page colour so the bar stays the same material it was. */
+    --bar-strong: rgba(9, 9, 11, .88);
+
+    /* The two bars and the floating dock are one material: a wash of white, a
+       rim, and a blur with `saturate` behind it. Colourless on purpose -- what
+       says "this is glass" is the frost, not a tint -- and 24px is the blur
+       Safari renders on the GPU: a longer radius inside a fixed element is the
+       one place iOS falls off the compositor and the pane turns opaque.
+       No SVG filter here: refraction (a `feDisplacementMap` over the page
+       behind) is a WebKit-only trick, invisible everywhere else, and it costs
+       a full-page repaint on every scroll to work. */
+    --dock: rgba(255, 255, 255, .06);
+    --dock-line: rgba(255, 255, 255, .12);
+    --dock-blur: 24px;
+    --dock-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+    /* The lit top edge is the same sheen and rim every other panel wears
+       (--glass-sheen in the background stack, --glass-highlight in the shadow):
+       one gradient per surface, not a second one invented for the bar. */
+
+    --glass-line: rgba(255, 255, 255, .08);
     --glass-line-strong: rgba(255, 255, 255, .20);
-    --glass-blur: 22px;
-    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .07);
+    --glass-blur: 24px;
+    --glass-blur-strong: 40px;
+
+    /* The apple "translucent control": a wash of white, a hairline of white,
+       a blur behind it. Named as a set because the press, the hover and the
+       secondary variant all have to move together -- a button that changes
+       only its fill stops reading as one material. The hairline is faint on
+       purpose: on an obsidian page a 20% rim draws an outline around every
+       control and the row of them starts to look like a diagram. */
+    --control: rgba(255, 255, 255, .10);
+    --control-hover: rgba(255, 255, 255, .15);
+    --control-line: rgba(255, 255, 255, .12);
+
+    /* Light on the top edge, a whisper of it on the bottom one. Two insets are
+       what turn a flat wash into a pane: a lit rim above, a shaded rim below.
+       Both live in one token, so a caller writes `var(--glass-highlight)` and
+       gets the whole rim, not half of it. */
+    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .10),
+                       inset 0 -1px 0 rgba(255, 255, 255, .03);
+
+    /* A diagonal sheen -- light falling across the pane from the top-left --
+       laid into the background stack of every panel. It is the cheapest half of
+       the "liquid" in liquid glass: the pane stops being evenly lit. */
+    --glass-sheen: linear-gradient(140deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, 0) 46%);
 
     /* Kept under their old names: the login screen and its photo background
        still ask for exactly these two. */
     --surface-glass: var(--glass-strong);
     --surface-glass-soft: var(--glass-soft);
 
-    --line: rgba(245, 240, 225, .10);         /* low-contrast borders and rules */
-    --line-strong: rgba(245, 240, 225, .18);
+    --line: rgba(255, 255, 255, .10);         /* low-contrast borders and rules */
+    --line-strong: rgba(255, 255, 255, .18);
 
-    /* Accent: the iOS blue, with a violet partner for gradients and lights. */
+    /* Accent: the iOS system blue, with a violet partner for the lights. Both
+       are used the way the system uses them -- an icon, a focus ring, a live
+       figure -- and never as the fill of a button. */
     --accent: #0a84ff;
     --accent-2: #6d5efc;
     --accent-soft: rgba(10, 132, 255, .16);
     --cream: #f2efe4;           /* warm accent kept for headings and the brand */
-    --text: #e9edf6;
-    --text-dim: #98a2ba;
-    --danger: #ff6b6b;
-    --warning: #ffd166;
-    --success: #4ade80;
+    --text: #f5f5f7;            /* iOS label colour */
+    --text-dim: #8e8e93;        /* iOS secondary label */
+    --danger: #ff453a;          /* iOS systemRed */
+    --warning: #ffd60a;         /* iOS systemYellow */
+    --success: #30d158;         /* iOS systemGreen */
 
     /* Avatar palette: six tones that read under cream initials. */
     --avatar-0: #5b6ee1;
@@ -80,18 +137,42 @@
     --step-5: clamp(2.5rem, 1.95rem + 2.5vw, 4rem);
 
     /* Radii, layout, depth, motion ---------------------------------------- */
-    --radius-s: 10px;
-    --radius-m: 16px;
-    --radius-l: 22px;
-    --radius-xl: 28px;
+    /* Generous corners: the rounder a pane is, the more it reads as a drop of
+       glass and the less as a rectangle with soft edges. */
+    --radius-s: 12px;
+    --radius-m: 18px;
+    --radius-l: 26px;
+    --radius-xl: 34px;
+    --radius-dock: 40px;        /* the floating capsule's own corner */
+    --radius-dock-tab: 24px;    /* the selected tab inside it */
     --radius-pill: 999px;
     --content-max: 44rem;
     --nav-h: 3.5rem;
-    --shadow-soft: 0 10px 30px rgba(3, 6, 14, .45);
-    --shadow-glass: 0 18px 44px rgba(3, 6, 14, .55);
-    --shadow-raised: 0 8px 20px rgba(3, 6, 14, .5);
+    /* How much room the floating bottom bar needs at the foot of a page: the
+       bar itself, the safe-area inset under it and a thumb's worth of air, so
+       the last post of the feed is never left behind it. One token, because
+       three rules have to agree on it -- the body's bottom padding, the fade
+       above the bar and the bar's own height (see layout.css). */
+    --dock-clearance: calc(var(--nav-h) + 5.25rem);
+
+    /* Two shadows per surface: a tight contact one that pins the pane to the
+       page, and a wide ambient one that lifts it off. A single soft shadow
+       reads as flat no matter how large the blur is. On black, the ambient half
+       is what does the work -- the contact one only darkens, and darkness on an
+       obsidian page is nearly invisible. */
+    --shadow-soft: 0 12px 32px rgba(0, 0, 0, .5);
+    --shadow-glass: 0 2px 8px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .6);
+    --shadow-raised: 0 1px 3px rgba(0, 0, 0, .45), 0 12px 28px rgba(0, 0, 0, .5);
+
     --transition-fast: 160ms cubic-bezier(.32, .72, 0, 1);
     --transition-slow: 280ms cubic-bezier(.32, .72, 0, 1);
+    /* The length a control's own state change takes: fill, hairline and scale
+       together. Short enough that a press feels answered, long enough that the
+       fill is not a flash. */
+    --transition-control: 200ms cubic-bezier(.32, .72, 0, 1);
+    /* Overshoots and settles: the motion of a thing with a little weight to it.
+       Used where something *arrives* -- the selected tab, a page sliding in. */
+    --transition-spring: 460ms cubic-bezier(.3, 1.25, .4, 1);
 }
 
 /* Self-hosted webfonts. Each family is a variable font, so one woff2 per

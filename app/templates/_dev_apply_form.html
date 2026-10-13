@@ -1,0 +1,42 @@
+{# The dev-team application form, in one file because it is shown twice: in the
+   sheet on /me, and on its own page /me/dev-apply for a browser without a
+   script -- a <dialog> that never opens would leave the button dead. Same
+   fields in both, so the two cannot drift apart.
+
+   ``roles`` and ``role_labels`` come from app.services.team: the code is what
+   is stored and what the service validates, the label is what a student reads.
+   ``application`` is the one already sent by this student, if any, and is only
+   used to pre-fill the form -- sending again is an update, not a second row. #}
+{% set roles = roles|default([]) %}
+{% set role_labels = role_labels|default({}) %}
+{# Что стоит в форме сейчас. По умолчанию -- уже отправленная заявка, но при
+   отказе сюда приходит то, что ученик только что ввёл: стереть его и заставить
+   набирать заново было бы наказанием за опечатку в нике. #}
+{% set role_value = role_value|default(application.role if application else '') %}
+{% set contact_value = contact_value|default(application.contact if application else '') %}
+{% import "_macros.html" as ui %}
+<p class="hint">Выберите, чем хочется заниматься, и оставьте ник в Telegram — мы
+    напишем туда, если позовём в команду.</p>
+<p class="error" role="alert" data-error-slot hidden></p>
+<form method="post" action="/me/dev-applications" class="stacked-form"
+      data-async="team" data-api="/api/team-applications">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset class="choice-field">
+        <legend>Роль</legend>
+        {% for role in roles %}
+        <label class="checkbox">
+            <input type="radio" name="role" value="{{ role }}"
+                   {% if loop.first %}required{% endif %}
+                   {% if role_value == role %}checked{% endif %}>
+            {{ role_labels.get(role, role) }}
+        </label>
+        {% endfor %}
+    </fieldset>
+
+    <label for="contact">Ник в Telegram</label>
+    <input id="contact" name="contact" type="text" maxlength="64"
+           autocomplete="off" placeholder="@nickname"
+           value="{{ contact_value }}" required>
+
+    <button type="submit">{{ ui.icon('send') }} Отправить заявку</button>
+</form>

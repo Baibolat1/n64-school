@@ -1,6 +1,6 @@
-{# Верхняя навигация: на широких экранах (планшет/ноутбук и выше), на
-   телефонах скрыта через layout.css. Рендерится из base.html только внутри
-   `{% if student %}`.
+{# Верхняя шапка: на всех ширинах. На широком экране она несёт сами разделы
+   (нижней панели там нет), на телефоне — только знак и меню: разделы под
+   рукой в нижнем доке, и вторая навигация на том же экране нужна не была бы.
 
    Выхода здесь намеренно нет: выход живёт только в профиле, чтобы ученик не
    вылетел из аккаунта от промаха по меню.
@@ -20,7 +20,7 @@
             <a href="/feed"{% if path == '/feed' or path.startswith('/feed/') %} class="is-active"{% endif %}>{{ ui.icon('feed') }}<span>Лента</span></a>
             <a href="/schedule"{% if path == '/schedule' %} class="is-active"{% endif %}>{{ ui.icon('calendar') }}<span>Расписание</span></a>
             <a href="/assistant"{% if path == '/assistant' %} class="is-active"{% endif %}>{{ ui.icon('sparkles') }}<span>Ассистент</span></a>
-            <a href="/esports"{% if path == '/esports' %} class="is-active"{% endif %}>{{ ui.icon('gamepad') }}<span>Игры</span></a>
+            <a href="/esports"{% if path == '/esports' %} class="is-active"{% endif %}>{{ ui.icon('gamepad') }}<span>Турниры</span></a>
             <a href="/teachers"{% if path == '/teachers' or path.startswith('/teachers/') %} class="is-active"{% endif %}>{{ ui.icon('users') }}<span>Учителя</span></a>
         </span>
         <span class="topnav-user">
@@ -30,5 +30,32 @@
                 <span class="topnav-alias">{{ student.alias }}</span>
             </a>
         </span>
+        {# Меню — нативный <details>, а не кнопка со скриптом: оно открывается и
+           закрывается без JavaScript, и без него не остаётся мёртвой кнопки.
+           Панель ниже — обычная выпадашка, а не <dialog>: список ссылок не
+           нуждается в верхнем слое, а ловушка фокуса в менюиз пяти ссылок
+           мешала бы, а не помогала. Закрытие по Escape и по щелчку мимо —
+           единственное, что добавляет скрипт (см. app/static/app.js), и без
+           него меню просто закрывается повторным нажатием. #}
+        <details class="burger">
+            {# Иконка декоративная (aria-hidden), поэтому имя несёт сам summary. #}
+            <summary aria-label="Меню">{{ ui.icon('menu') }}</summary>
+            <div class="burger-panel">
+                <p class="burger-title">n64hub</p>
+                <p class="hint">Закрытый сайт школы №64 — для учеников.</p>
+
+                <div class="burger-section">
+                    <a href="/me">{{ ui.icon('user') }} Профиль</a>
+                    <a href="/teachers">{{ ui.icon('users') }} Учителя</a>
+                    <a href="/scan">{{ ui.icon('qr') }} QR-сканер</a>
+                </div>
+
+                <div class="burger-section">
+                    <p class="hint">Разработка n64hub. Хочешь развивать школьную
+                        платформу вместе с нами?</p>
+                    <a href="/me/dev-apply">{{ ui.icon('code') }} Подать заявку в команду</a>
+                </div>
+            </div>
+        </details>
     </div>
 </nav>

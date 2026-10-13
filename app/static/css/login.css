@@ -6,21 +6,25 @@
 /* Background: photo when app/static/img/bg.png exists, otherwise the solid
    --bg-deep colour and the gradient render on their own, so the page never
    shows an empty white block. The gradient also darkens the photo for
-   contrast. Its rgba stops mirror --bg-deep (#070b14). */
+   contrast. Its rgba stops mirror --bg-deep (#050506). */
 .login-page {
     min-height: 100vh;
     background-color: var(--bg-deep);
     background-image:
-        linear-gradient(180deg, rgba(7, 11, 20, .72), rgba(7, 11, 20, .96)),
+        linear-gradient(180deg, rgba(5, 5, 6, .72), rgba(5, 5, 6, .96)),
         url("/static/img/bg.png");
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
 }
 
+/* The two corners of the hero keep clear of the notch: on an installed app the
+   page is drawn behind the status bar (black-translucent, see base.html), and
+   at --space-5 both the wordmark and the burger would sit under the clock. */
 .login-logo {
     position: absolute;
     top: var(--space-5);
+    top: calc(var(--space-5) + env(safe-area-inset-top));
     left: var(--space-5);
     width: clamp(6rem, 16vw, 9rem);
     height: auto;
@@ -29,6 +33,7 @@
 .login-burger {
     position: absolute;
     top: var(--space-5);
+    top: calc(var(--space-5) + env(safe-area-inset-top));
     right: var(--space-5);
 }
 
@@ -111,6 +116,8 @@
         display: flex;
         align-items: center;
         padding: var(--space-7);
+        padding-top: calc(var(--space-7) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom));
     }
 
     /* The card lives inside <main class="container">, and that column fills the
@@ -135,6 +142,12 @@
         align-items: center;
         justify-content: center;
         padding: var(--space-4);
+        /* On a phone the hero stacks in flow (logo, card, slogan), so the top of
+           the column is the first thing under the status bar. The bottom inset
+           matters for the same reason: the slogan is followed by the home
+           indicator. */
+        padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
     }
 
     /* Stack the hero in the flow instead of pinning it to the corners.

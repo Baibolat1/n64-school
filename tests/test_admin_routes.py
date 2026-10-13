@@ -124,11 +124,12 @@ CASES: tuple[Case, ...] = (
         success_status=200,
         audit_delta=0,
     ),
-    # The three queues.
+    # The three queues, and the offers to help build the site.
     Case("GET", "/admin/reports", "/admin/reports"),
     Case("GET", "/admin/pii", "/admin/pii"),
     Case("GET", "/admin/blocked", "/admin/blocked"),
     Case("GET", "/admin/audit", "/admin/audit"),
+    Case("GET", "/admin/dev-applications", "/admin/dev-applications"),
     # One object, and the verdict on it.
     Case(
         "GET",

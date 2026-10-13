@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Заявка в команду{% endblock %}
+{% block content %}
+{# The page behind the sheet's button. It exists for the browser without a
+   script -- there the button is an ordinary link, and this is where it lands --
+   but it is a real page for everybody else too: it can be linked, reloaded and
+   reached directly, and the form on it sends a student back here with a
+   message rather than to a dead end (see app.routers.auth). #}
+<p class="back-link"><a href="/me">← Назад в профиль</a></p>
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Разработка n64hub</p>
+        <h1>Заявка в команду</h1>
+    </div>
+</div>
+
+<section class="glass">
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    {% include "_dev_apply_form.html" %}
+</section>
+{% endblock %}

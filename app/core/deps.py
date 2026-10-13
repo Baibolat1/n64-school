@@ -39,9 +39,11 @@ async def require_csrf(request: Request) -> None:
     form on the request, so the endpoint's own ``Form`` parameters reuse it
     instead of reading the stream twice.
 
-    Only form-encoded bodies can carry the token, which is fine while every
-    state-changing route is an HTML form. A JSON endpoint added later must not
-    reuse this dependency as-is.
+    Only form-encoded bodies can carry the token. That is why the JSON endpoints
+    under ``/api`` send ``FormData`` and not a JSON body: they answer JSON, but
+    they still submit a form, so this one check guards both ways in -- the HTML
+    page and the script (see app.routers.api). A route that took a real JSON body
+    would need a CSRF story of its own.
     """
     if request.method in _SAFE_METHODS:
         return

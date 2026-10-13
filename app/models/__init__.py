@@ -9,6 +9,7 @@ from app.models.report import Report
 from app.models.review import Review, ReviewScore
 from app.models.school import Homework, LessonNote, ScheduleEntry
 from app.models.student import Student
+from app.models.team import DevApplication
 from app.models.teacher import Criterion, Teacher
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "AdminSession",
     "Comment",
     "Criterion",
+    "DevApplication",
     "Homework",
     "Invite",
     "LessonNote",

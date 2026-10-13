@@ -1,0 +1,27 @@
+{# One comment, included from post.html and rendered on its own by the async
+   endpoint (see app.routers.api) -- so the comment the page shows and the
+   comment the script inserts are one template and cannot drift apart.
+
+   Everything it reads comes from the caller: the loop on the post's page sets
+   ``comment`` and the page sets ``avatar_keys``. Both are read with a fallback
+   so this partial spells out what it needs and renders empty-handed rather than
+   blowing up if a caller forgets one. #}
+{% set avatar_keys = avatar_keys|default({}) %}
+{% import "_macros.html" as ui %}
+<article class="comment">
+    <div class="post-meta">
+        {{ ui.avatar(comment.display_alias, 'sm', avatar_keys.get(comment.author_id)) }}
+        <span class="post-author">{{ comment.display_alias }}</span>
+        <time datetime="{{ comment.created_at.isoformat() }}">
+            {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
+        </time>
+    </div>
+    <p class="comment-body">{{ comment.body }}</p>
+    {# As on a post: no complaint button on your own comment, and the route
+       refuses it anyway. #}
+    {% if student and student.id != comment.author_id %}
+    <p class="post-footer">
+        <a href="/report/comment/{{ comment.id }}">Пожаловаться</a>
+    </p>
+    {% endif %}
+</article>

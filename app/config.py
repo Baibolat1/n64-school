@@ -106,14 +106,20 @@ class Settings(BaseSettings):
     RATE_LIMIT_ASSISTANT_WINDOW_SECONDS: int = 3600
 
     # --- Assistant (hybrid: school database first, model second) --------------
-    # Both keys are optional and both empty by default: without a key the
+    # All three keys are optional and all empty by default: without a key the
     # assistant answers from the school database only and sends nothing
-    # anywhere. The key is read here and never logged. When both are set, the
-    # Anthropic one wins.
+    # anywhere. The key is read here and never logged. When more than one is
+    # set the first one wins, in the order they are declared: Anthropic, then
+    # OpenAI, then DeepSeek.
     ANTHROPIC_API_KEY: str = ""
     # Model used for the free-form answers. Claude Opus 5.5 is the current
     # default; see docs/PLAN.md if it ever needs to change.
     ANTHROPIC_MODEL: str = "claude-opus-5-5"
+    OPENAI_API_KEY: str = ""
+    # Read from the account, not guessed: OpenAI hands out model ids that come
+    # and go, so this is a starting point to be changed in .env rather than a
+    # promise about what exists.
+    OPENAI_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"
     # Upper bound on a generated answer, and how long to wait for it before

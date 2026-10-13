@@ -11,10 +11,11 @@
 
 /* Panels ------------------------------------------------------------------- */
 
-/* The one card look of the whole site. `isolation: isolate` keeps the inset
-   highlight from bleeding into the backdrop filter, and the top edge gets a
-   brighter line so the sheet reads as lit from above -- which is most of what
-   makes glass look like glass rather than like a grey box. */
+/* The one card look of the whole site. Three things stack into it and all three
+   are needed: the sheen and the rim (a lit top edge, a shaded bottom one) say
+   where the light comes from, and the blur with `saturate` makes whatever is
+   behind the pane show through as colour rather than as grey. Drop any one of
+   them and the sheet goes back to being a box. */
 .glass,
 .card,
 .post-card,
@@ -23,19 +24,23 @@
 .login-card {
     position: relative;
     padding: var(--space-5);
-    background: var(--glass);
+    background: var(--glass-sheen), var(--glass);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-l);
     box-shadow: var(--shadow-glass), var(--glass-highlight);
-    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
 }
 
 /* The hero panel of a page: a touch brighter, with an accent wash in the
-   corner, so the first block of a screen has somewhere for the eye to land. */
+   corner, so the first block of a screen has somewhere for the eye to land.
+   The wash is a tenth of the blue rather than a quarter: on obsidian, colour
+   that is meant to be atmosphere has to be almost subliminal, or the panel
+   turns into a blue box and takes the whole screen with it. */
 .glass--hero {
     background:
-        radial-gradient(120% 140% at 0% 0%, rgba(10, 132, 255, .18), transparent 58%),
+        radial-gradient(120% 140% at 0% 0%, rgba(10, 132, 255, .10), transparent 58%),
+        var(--glass-sheen),
         var(--glass);
 }
 
@@ -48,6 +53,22 @@
 
 .hero-head .icon {
     color: var(--accent);
+}
+
+/* Inner tiles -----------------------------------------------------------------
+
+   Everything drawn *inside* a panel -- a lesson of the day, a line of homework,
+   a day of the week, a member of a roster -- is the same small pane: a wash, a
+   hairline and the same lit top edge its parent has. They are listed together
+   because they are one decision, not six: a tile that forgets its edge looks
+   sunk into the panel instead of lying on it. */
+.timeline-item,
+.hw-item,
+.week-day,
+.widget-lessons li,
+.roster-item,
+.badge-card {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
 /* Messages ----------------------------------------------------------------- */
@@ -124,9 +145,10 @@
     font-size: var(--step--1);
     font-weight: 500;
     color: var(--text);
-    background: rgba(255, 255, 255, .06);
+    background: var(--glass-sheen), rgba(255, 255, 255, .06);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-pill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
     white-space: nowrap;
     transition: background var(--transition-fast), transform var(--transition-fast);
 }
@@ -138,8 +160,8 @@ a.chip:hover {
 
 .chip--on {
     color: #fff;
-    background: linear-gradient(160deg, rgba(10, 132, 255, .8), rgba(109, 94, 252, .75));
-    border-color: transparent;
+    background: var(--glass-sheen), var(--control);
+    border-color: var(--control-line);
 }
 
 .chip--ghost {
@@ -151,17 +173,48 @@ a.chip:hover {
 .chip--cs2 { color: #ffb86b; }
 .chip--brawl { color: #ff9ad5; }
 
+/* A chip that is itself a button -- the assistant's suggested questions. It
+   keeps the chip's quiet tone because it is a shortcut to a question, not an
+   action, and it must not out-shout the "Спросить" beside it. The compound
+   selector is what makes that hold: `button.chip` carries more weight than the
+   bare `button` block further down, which would otherwise dress it as a pill
+   button. */
+button.chip {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--step--1);
+    font-weight: 500;
+    color: var(--text-dim);
+    background: none;
+    border: 1px dashed var(--glass-line);
+    border-radius: var(--radius-pill);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    cursor: pointer;
+}
+
+button.chip:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, .06);
+    border-color: var(--glass-line-strong);
+}
+
+button.chip:active {
+    transform: scale(.97);
+}
+
 .profile-hero {
     justify-content: flex-start;
     padding: var(--space-5);
     background:
-        radial-gradient(120% 160% at 0% 0%, rgba(109, 94, 252, .22), transparent 60%),
+        radial-gradient(120% 160% at 0% 0%, rgba(109, 94, 252, .12), transparent 60%),
+        var(--glass-sheen),
         var(--glass);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-l);
     box-shadow: var(--shadow-glass), var(--glass-highlight);
-    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
 }
 
 .profile-hero-text h1 {
@@ -183,6 +236,10 @@ a.chip:hover {
     color: var(--text-dim);
 }
 
+/* A field is the one surface on the page that is *recessed* rather than raised:
+   the shadow sits inside it and the hairline sits on the bottom edge, which is
+   the light of the pane opposite. That inversion is what makes it read as a
+   well to type into instead of a button to press. */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -195,7 +252,7 @@ textarea {
     background: rgba(6, 10, 20, .55);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-m);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35), inset 0 -1px 0 rgba(255, 255, 255, .05);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -215,7 +272,9 @@ input[type="number"]:focus,
 textarea:focus {
     outline: none;
     border-color: rgba(10, 132, 255, .7);
-    box-shadow: 0 0 0 4px var(--accent-soft), inset 0 1px 2px rgba(0, 0, 0, .3);
+    box-shadow: 0 0 0 4px var(--accent-soft),
+                inset 0 2px 6px rgba(0, 0, 0, .35),
+                inset 0 -1px 0 rgba(255, 255, 255, .05);
 }
 
 textarea {
@@ -223,10 +282,18 @@ textarea {
     line-height: 1.5;
 }
 
-/* Buttons: an iOS-grade control -- a gradient body, an inner highlight along
-   the top edge, a soft coloured shadow underneath. It lifts on hover, presses
-   down on click, and never changes size while doing it. */
-button {
+/* Buttons: the Apple translucent control -- a wash of white, a hairline of
+   white, a blur of whatever is behind it, and a pill outline. There is no
+   gradient and no colour: the button says "press me" with its material and its
+   weight, and the only thing that moves on press is the scale. Weight and
+   saturation are what a control has instead of meaning, and a filled blue
+   button on every form is how an interface ends up shouting.
+
+   Three states, one material: idle at 10% white, hover at 15%, pressed at 15%
+   and smaller. `--transition-control` carries all three, so the fill and the
+   scale finish together instead of one arriving before the other. */
+button,
+.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -237,38 +304,67 @@ button {
     font-weight: 600;
     letter-spacing: -0.01em;
     color: #fff;
-    background: linear-gradient(180deg, #2f9bff, #0a6dff 55%, #4b52e8);
-    border: none;
-    border-radius: var(--radius-m);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, .35),
-        0 6px 18px rgba(10, 109, 255, .35);
+    background: var(--glass-sheen), var(--control);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--glass-highlight), 0 2px 10px rgba(0, 0, 0, .35);
     cursor: pointer;
-    transition: transform var(--transition-fast), filter var(--transition-fast),
-                box-shadow var(--transition-fast);
+    text-decoration: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--transition-control), background var(--transition-control),
+                border-color var(--transition-control), box-shadow var(--transition-control);
 }
 
-button:hover {
-    filter: brightness(1.08);
-    transform: translateY(-1px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, .4),
-        0 10px 24px rgba(10, 109, 255, .45);
+button:hover,
+.btn:hover {
+    color: #fff;
+    background: var(--glass-sheen), var(--control-hover);
+    border-color: rgba(255, 255, 255, .28);
 }
 
-/* The press is the point of a good button: it goes *down*, and the shadow
-   shrinks with it, so the control feels attached to the finger. */
-button:active {
-    transform: translateY(1px) scale(.985);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3),
-                0 3px 10px rgba(10, 109, 255, .3);
+/* The press is the point of a good button: it shrinks under the finger, so the
+   control feels attached to it. */
+button:active,
+.btn:active {
+    transform: scale(.95);
+    box-shadow: var(--glass-highlight);
 }
 
 button:disabled {
     cursor: not-allowed;
     opacity: .5;
     transform: none;
-    filter: none;
+}
+
+/* Secondary action: no wash at all, just the hairline and the word. It is what
+   a "cancel", a "later" or a destructive-looking link wears, and it has to sit
+   quietly next to a real button without competing with it. */
+.btn--ghost {
+    background: none;
+    color: var(--text-dim);
+    border-color: var(--glass-line);
+    box-shadow: none;
+}
+
+.btn--ghost:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, .05);
+    border-color: var(--glass-line-strong);
+}
+
+.btn--block {
+    width: 100%;
+}
+
+/* A round icon control: the profile's camera, the close of a sheet. Square by
+   construction, so one width and no padding maths. */
+.btn--icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border-radius: 50%;
 }
 
 .checkbox {
@@ -316,7 +412,10 @@ button:disabled {
     color: var(--text-dim);
     background: rgba(255, 255, 255, .04);
     border: 1px solid var(--glass-line);
-    border-radius: var(--radius-m);
+    border-radius: var(--radius-pill);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     cursor: not-allowed;
 }
 
@@ -419,12 +518,15 @@ body:not(.login-page) main > * + * {
 
 /* The action row of a post: outline icons with their counters, the way a feed
    reads today. Nothing here is a filled button, so nothing competes with the
-   text above it. */
+   text above it -- but the row is still a row of controls, and every one of
+   them wears the same pill as the buttons elsewhere: same padding, same size,
+   same hairline. A like, a comment counter and a "Пожаловаться" that are three
+   different shapes read as three different kinds of thing. */
 .post-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-1) var(--space-3);
+    gap: var(--space-1) var(--space-2);
     margin-top: var(--space-3);
     font-size: var(--step--1);
 }
@@ -443,20 +545,26 @@ body:not(.login-page) main > * + * {
     font: inherit;
     font-weight: 500;
     color: var(--text-dim);
-    background: rgba(255, 255, 255, .04);
-    border: 1px solid transparent;
+    background: var(--control);
+    border: 1px solid var(--control-line);
     border-radius: var(--radius-pill);
+    /* It is a <button>, so it would wear the button's own glass, blur and
+       shadow unless told otherwise; an action row is a lighter control than a
+       form's submit. */
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     text-decoration: none;
     cursor: pointer;
-    transition: color var(--transition-fast), background-color var(--transition-fast),
-                border-color var(--transition-fast), transform var(--transition-fast);
+    transition: color var(--transition-control), background-color var(--transition-control),
+                border-color var(--transition-control), transform var(--transition-control);
 }
 
 .action:hover,
 .action:active {
     color: var(--text);
-    background: rgba(255, 255, 255, .1);
-    border-color: var(--glass-line);
+    background: var(--control-hover);
+    border-color: rgba(255, 255, 255, .22);
     transform: translateY(-1px) scale(1);
     filter: none;
     box-shadow: none;
@@ -1110,7 +1218,8 @@ body:not(.login-page) main > * + * {
     font-weight: 700;
     line-height: 1;
     color: #fff;
-    background: linear-gradient(160deg, rgba(10, 132, 255, .85), rgba(109, 94, 252, .8));
+    background: var(--control);
+    border: 1px solid var(--control-line);
     border-radius: var(--radius-pill);
     box-shadow: var(--glass-highlight);
 }
@@ -1143,14 +1252,20 @@ body:not(.login-page) main > * + * {
 }
 
 /* Rating: one radio per point of the criterion's own scale. The chosen state
-   hangs off `input:checked + span`, so nothing here needs a script. */
+   hangs off `input:checked + span`, so nothing here needs a script.
 
+   The frame is shared with `.choice-field` -- any group of labelled choices
+   (the report reasons, the dev-team roles). The browser's default fieldset
+   border is a dropped frame from another era, and neither group wants it. */
+
+.choice-field,
 .rating-field {
     margin: 0;
     padding: 0;
     border: 0;
 }
 
+.choice-field legend,
 .rating-field legend {
     padding: 0;
     font-size: var(--step--1);
@@ -1204,9 +1319,9 @@ body:not(.login-page) main > * + * {
 
 .rating-option input:checked + span {
     color: #fff;
-    background: linear-gradient(180deg, #2f9bff, #0a6dff);
-    border-color: transparent;
-    box-shadow: var(--glass-highlight), 0 4px 12px rgba(10, 109, 255, .4);
+    background: var(--control-hover);
+    border-color: var(--control-line);
+    box-shadow: var(--glass-highlight);
 }
 
 .rating-option input:focus-visible + span {
@@ -1556,6 +1671,406 @@ a.stat-card:hover {
     margin-top: var(--space-4);
 }
 
+/* Toasts ------------------------------------------------------------------- */
+
+/* The answer to something that already happened. Every write on the site is an
+   async request now, so the page no longer reloads to tell the reader anything:
+   this is where "сохранено", "опубликовано" and "не вышло" arrive.
+
+   It sits above the dock on a phone and above nothing in particular on a wide
+   screen, centered, and it never takes a click -- except on its own surface, so
+   a reader can dismiss it early. */
+.toast-host {
+    position: fixed;
+    right: 0;
+    bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    left: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+    pointer-events: none;
+}
+
+.toast {
+    max-width: 30rem;
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--step--1);
+    font-weight: 500;
+    text-align: center;
+    color: var(--text);
+    background: var(--glass-sheen), rgba(28, 28, 30, .88);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+    pointer-events: auto;
+    animation: toast-in var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+.toast--success {
+    color: var(--success);
+}
+
+.toast--error {
+    color: var(--danger);
+}
+
+/* A button that only has something to say (the profile's camera). Neither a
+   success nor a failure, so it keeps the toast's own colour rather than
+   borrowing the green of a saved write. */
+.toast--info {
+    color: var(--text);
+}
+
+/* On the way out the toast keeps its place for the length of the animation and
+   only then leaves the document -- a toast removed mid-fade would blink. */
+.toast.is-leaving {
+    animation: toast-out var(--transition-fast) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(.96);
+    }
+}
+
+@keyframes toast-out {
+    to {
+        opacity: 0;
+        transform: translateY(6px) scale(.98);
+    }
+}
+
+/* Sheet (the native <dialog>) --------------------------------------------- */
+
+/* A modal is the one place a native element is the whole answer: <dialog> is
+   drawn in the browser's top layer, so it floats over the page no matter what
+   transform a swipe has left on <main>, Escape closes it for free, and the rest
+   of the page stops being reachable by tab -- none of which a positioned <div>
+   gets without a script fighting the browser.
+
+   The API is still `showModal()` (static/app.js), so the dialog degrades to
+   "hidden" without JavaScript; the apply form has a page of its own for that
+   case (see app.routers.auth). */
+dialog.sheet {
+    width: min(30rem, calc(100vw - 2rem));
+    padding: 0;
+    color: var(--text);
+    background: var(--glass-sheen), rgba(22, 22, 24, .90);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(180%);
+}
+
+dialog.sheet::backdrop {
+    background: rgba(0, 0, 0, .6);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+dialog.sheet[open] {
+    animation: sheet-in var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+@keyframes sheet-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(.97);
+    }
+}
+
+.sheet-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-5) var(--space-2);
+}
+
+.sheet-head h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--step-1);
+}
+
+/* The body scrolls inside itself rather than the dialog growing: the settings
+   sheet carries thirteen gallery circles, and a dialog taller than a phone
+   screen is a dialog whose own close button can be scrolled off the top. The
+   head above it stays where it is. */
+.sheet-body {
+    padding: 0 var(--space-5) var(--space-5);
+    max-height: min(70vh, 34rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.sheet-body > * + * {
+    margin-top: var(--space-3);
+}
+
+/* Profile ----------------------------------------------------------------- */
+
+/* The photo is the largest avatar on the site -- it is the one place where the
+   picture is the subject rather than a marker next to a name. */
+.profile-photo {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.avatar--xl {
+    width: 5rem;
+    height: 5rem;
+    font-size: var(--step-2);
+}
+
+.profile-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+/* The hero is a flex row, so the button's usual top margin -- which exists to
+   separate it from the field above it in a stacked form -- would only push it
+   away from the line it belongs to. */
+.profile-hero-text .btn {
+    align-self: flex-start;
+    margin-top: var(--space-2);
+}
+
+/* The team card: a panel that is mostly an invitation, so the text and the
+   button are all it needs. */
+.team-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.team-card h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.team-card h2 .icon {
+    color: var(--accent);
+}
+
+.team-card p {
+    color: var(--text-dim);
+    font-size: var(--step--1);
+}
+
+.team-card .btn {
+    align-self: flex-start;
+    margin-top: 0;
+}
+
+/* The settings card: one row with a word and a way into the sheet. It is the
+   same shape as the team card and for the same reason -- both are a line of
+   text and a control, not a form. */
+.settings-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.settings-card h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.settings-card h2 .icon {
+    color: var(--text-dim);
+}
+
+.settings-card p {
+    color: var(--text-dim);
+    font-size: var(--step--1);
+}
+
+.settings-card .btn {
+    align-self: flex-start;
+    margin-top: 0;
+}
+
+/* One thing to change inside the sheet: a heading, a word about it, and the
+   form. Two of these stack in the dialog and on /me/settings, so the spacing
+   is stated once here rather than in both templates. */
+.settings-group + .settings-group {
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--glass-line);
+}
+
+.settings-group h3 {
+    margin-bottom: var(--space-2);
+}
+
+.settings-group > .hint {
+    margin-bottom: var(--space-3);
+}
+
+.settings-group form button[type="submit"] {
+    align-self: flex-start;
+}
+
+/* Assistant: a conversation, not a form with an answer under it ------------- */
+
+/* The page keeps its form (a question still submits without JavaScript), but
+   the shape is a chat: what was asked on the right, what came back on the left,
+   and a typing indicator where the answer will land. */
+.chat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* The panel the conversation and its form share: the same gap as between two
+   bubbles, so the input reads as the next line of the thread rather than as a
+   form that happens to be nearby. */
+.chat-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.chat:empty {
+    display: none;
+}
+
+.bubble {
+    max-width: 88%;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-l);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    animation: bubble-in var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+.bubble--user {
+    align-self: flex-end;
+    background: var(--glass-sheen), var(--control);
+    border-color: var(--control-line);
+    border-bottom-right-radius: var(--space-2);
+}
+
+.bubble--assistant {
+    align-self: flex-start;
+    background: var(--glass-sheen), var(--glass);
+    border-bottom-left-radius: var(--space-2);
+}
+
+.bubble-source {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+@keyframes bubble-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+/* Three dots that breathe while the answer is being written. It is the only
+   loading state on the site, and it exists because a question to a model can
+   take ten seconds -- long enough that a still page reads as a dead one. */
+.typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: var(--space-2) var(--space-1);
+}
+
+.typing span {
+    width: 7px;
+    height: 7px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: typing-bounce 1.15s ease-in-out infinite;
+}
+
+.typing span:nth-child(2) { animation-delay: .14s; }
+.typing span:nth-child(3) { animation-delay: .28s; }
+
+@keyframes typing-bounce {
+    0%, 60%, 100% {
+        opacity: .35;
+        transform: translateY(0);
+    }
+    30% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+}
+
+/* Markdown, as the assistant writes it ------------------------------------- */
+
+/* Restricted on purpose: the renderer escapes every character of the model's
+   answer *before* it puts any tag in (app/core/markdown.py), so the only markup
+   that can reach the page is the handful styled here. */
+.md > * + * {
+    margin-top: var(--space-3);
+}
+
+.md ul,
+.md ol {
+    padding-left: 1.35em;
+    list-style: disc;
+}
+
+.md ol {
+    list-style: decimal;
+}
+
+.md li + li {
+    margin-top: var(--space-1);
+}
+
+.md h3 {
+    font-size: var(--step-0);
+    color: var(--text);
+}
+
+.md code {
+    padding: 1px 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: rgba(255, 255, 255, .08);
+    border-radius: 6px;
+}
+
+.md pre {
+    padding: var(--space-3);
+    overflow-x: auto;
+    background: rgba(0, 0, 0, .35);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-m);
+}
+
+.md pre code {
+    padding: 0;
+    background: none;
+}
+
+.md strong {
+    font-weight: 650;
+    color: #fff;
+}
+
 /* Motion ------------------------------------------------------------------- */
 
 /* Everything above is decoration, and a reader who has told the system they do
@@ -1566,12 +2081,25 @@ a.stat-card:hover {
     .posts .post-card,
     .action--like.is-liked .icon,
     .answer-body,
-    .status--live {
+    .status--live,
+    .toast,
+    .toast.is-leaving,
+    .bubble,
+    dialog.sheet[open] {
         animation: none;
+    }
+
+    /* The typing dots stay visible -- they are a status, not a decoration --
+       but they stop bouncing. */
+    .typing span {
+        animation: none;
+        opacity: .7;
     }
 
     button:hover,
     button:active,
+    .btn:hover,
+    .btn:active,
     .action:hover,
     .action:active,
     .pagination a:hover,
@@ -1582,5 +2110,13 @@ a.stat-card:hover {
     .timeline-item:hover,
     .avatar-option:hover {
         transform: none;
+    }
+}
+
+/* The toast clears the dock on a phone, and on a wide screen, where there is no
+   dock, it only has to clear the edge. */
+@media (max-width: 767px) {
+    .toast-host {
+        bottom: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
     }
 }

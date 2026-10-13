@@ -3,23 +3,28 @@
    and the mobile bottom bar. Loaded after theme.css and before components.css.
    ========================================================================== */
 
-/* Background lights -------------------------------------------------------- */
+/* Background mesh ---------------------------------------------------------- */
 
-/* Three soft coloured lights fixed behind everything. They are what the glass
-   panels are frosted *over*: without something behind it, a blur is invisible
-   and the panels read as flat grey boxes. Purely decorative, pointer-events
-   off, and painted with gradients so no image file is needed (the CSP allows
-   only /static anyway). */
+/* Four wide, soft, low-alpha lights fixed behind everything. They are what the
+   glass panels are frosted *over*: without something behind it, a blur is
+   invisible and the panels read as flat grey boxes. Purely decorative,
+   pointer-events off, and painted with gradients so no image file is needed
+   (the CSP allows only /static anyway).
+
+   The alphas are deliberately low -- a third of what a "colourful" dark theme
+   would use. On an obsidian page the mesh is not decoration that is meant to be
+   seen, it is what keeps the black from being a void: a panel over a flat #000
+   has nothing to blur, and the whole surface reads as a grey rectangle. */
 body::before {
     content: "";
     position: fixed;
     inset: -20vmax;
     z-index: -1;
     background:
-        radial-gradient(38vmax 38vmax at 12% 8%, rgba(10, 132, 255, .28), transparent 62%),
-        radial-gradient(34vmax 34vmax at 88% 4%, rgba(109, 94, 252, .26), transparent 60%),
-        radial-gradient(44vmax 44vmax at 70% 96%, rgba(20, 184, 166, .18), transparent 64%),
-        radial-gradient(30vmax 30vmax at 20% 78%, rgba(240, 171, 252, .14), transparent 62%);
+        radial-gradient(46vmax 46vmax at 10% 4%, rgba(10, 132, 255, .16), transparent 64%),
+        radial-gradient(40vmax 40vmax at 92% 2%, rgba(109, 94, 252, .14), transparent 62%),
+        radial-gradient(52vmax 52vmax at 74% 98%, rgba(20, 184, 166, .09), transparent 66%),
+        radial-gradient(36vmax 36vmax at 16% 82%, rgba(240, 171, 252, .07), transparent 64%);
     animation: lights-drift 42s ease-in-out infinite alternate;
 }
 
@@ -44,31 +49,58 @@ body::before {
 /* Top navigation ----------------------------------------------------------- */
 
 /* A sticky bar of frosted glass, translucent enough to show the lights sliding
-   under it. `saturate` is what keeps a blurred colour from turning grey. */
+   under it. `saturate` is what keeps a blurred colour from turning grey.
+
+   The same material as the dock below (--dock, --dock-blur): the two are the
+   top and bottom edges of one screen, and a page whose header is darker than
+   its tab bar looks like two applications stacked. No SVG filter, and the
+   blur stays at 24px -- see theme.css for why. */
 .topnav {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: var(--glass-strong);
-    border-bottom: 1px solid var(--glass-line);
-    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    background: var(--glass-sheen), var(--dock);
+    border-bottom: 1px solid var(--dock-line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+    backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    transition: background var(--transition-slow), box-shadow var(--transition-slow);
 }
 
+/* Once the page has moved, the bar stops being a pane lying on the lights and
+   becomes a lid over the content: it closes up and drops a shadow so the text
+   scrolling under it never fights with the links on it. `is-scrolled` is put
+   there by static/swipe.js and means nothing if the script never runs. */
+.topnav.is-scrolled {
+    background: var(--bar-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* One row, never two. The bar is a single line of controls at every width --
+   it thins its contents instead of wrapping them (see the two media queries at
+   the foot of this section), because a header that breaks into two lines moves
+   the whole page down by a line the moment a label grows a letter. */
 .topnav-inner {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
-    max-width: 64rem;
+    gap: var(--space-3);
+    max-width: 72rem;
     margin: 0 auto;
     padding: var(--space-2) var(--space-4);
+    /* On an installed app the bar starts under the status bar (the page is
+       drawn behind it, see the viewport meta), so it carries the inset. Written
+       as a second declaration rather than as a calc in the shorthand: a browser
+       that does not know safe-area-inset keeps the padding above. */
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
     font-size: var(--step--1);
+    flex-wrap: nowrap;
 }
 
 .topnav-brand {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
+    flex: 0 0 auto;
     font-weight: 600;
     color: var(--cream);
 }
@@ -83,16 +115,18 @@ body::before {
     font-size: 1.05rem;
     font-weight: 700;
     line-height: 1;
-    color: #fff;
-    background: linear-gradient(150deg, var(--accent), var(--accent-2));
-    border-radius: 9px;
-    box-shadow: var(--glass-highlight), 0 4px 14px rgba(10, 132, 255, .35);
+    color: var(--cream);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: 12px;
+    box-shadow: var(--glass-highlight);
 }
 
 .topnav-name {
     font-family: var(--font-display);
     font-size: var(--step-1);
     letter-spacing: 0.04em;
+    white-space: nowrap;
 }
 
 /* The links read as one pill of glass: the current section is a filled chip
@@ -103,9 +137,10 @@ body::before {
     gap: var(--space-1);
     margin-left: auto;
     padding: var(--space-1);
-    background: rgba(255, 255, 255, .05);
+    background: var(--glass-sheen), rgba(255, 255, 255, .05);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-pill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
 .topnav-links a {
@@ -116,24 +151,31 @@ body::before {
     color: var(--text-dim);
     border-radius: var(--radius-pill);
     white-space: nowrap;
-    transition: color var(--transition-fast), background var(--transition-fast);
+    transition: color var(--transition-control), background var(--transition-control),
+                transform var(--transition-control);
 }
 
 .topnav-links a:hover {
     color: var(--text);
-    background: rgba(255, 255, 255, .06);
+    background: rgba(255, 255, 255, .07);
 }
 
+.topnav-links a:active {
+    transform: scale(.95);
+}
+
+/* The current section: more white, not more colour. */
 .topnav-links .is-active {
     color: #fff;
-    background: linear-gradient(160deg, rgba(10, 132, 255, .9), rgba(109, 94, 252, .85));
-    box-shadow: var(--glass-highlight), 0 4px 14px rgba(10, 132, 255, .3);
+    background: var(--glass-sheen), var(--control);
+    box-shadow: var(--glass-highlight);
 }
 
 .topnav-user {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
+    flex: 0 0 auto;
 }
 
 .topnav-scan {
@@ -143,15 +185,15 @@ body::before {
     width: 2.1rem;
     height: 2.1rem;
     color: var(--text-dim);
-    background: rgba(255, 255, 255, .05);
+    background: var(--control);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-pill);
-    transition: color var(--transition-fast), background var(--transition-fast);
+    transition: color var(--transition-control), background var(--transition-control);
 }
 
 .topnav-scan:hover {
     color: var(--text);
-    background: rgba(255, 255, 255, .1);
+    background: var(--control-hover);
 }
 
 .topnav-profile {
@@ -159,13 +201,14 @@ body::before {
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-    background: rgba(255, 255, 255, .05);
+    background: var(--control);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-pill);
+    transition: background var(--transition-control);
 }
 
 .topnav-profile:hover {
-    background: rgba(255, 255, 255, .09);
+    background: var(--control-hover);
 }
 
 .topnav-alias {
@@ -173,6 +216,55 @@ body::before {
     color: var(--text);
     letter-spacing: -0.01em;
     white-space: nowrap;
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Thinning: the same bar, fewer words as it narrows. Labels go first, then the
+   wordmark, then the alias -- each step keeps the icons, which are the part
+   that still reads at a glance. A header that would rather wrap than let go of
+   a word is a header that changes height on every page.
+
+   The labels are clipped rather than removed, which is the same recipe as
+   `.visually-hidden`: `display: none` would take the link's name away from a
+   screen reader with it, and an icon-only link with no name is a link nobody
+   can use. */
+@media (max-width: 1180px) {
+    .topnav-links a span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .topnav-links a {
+        padding: var(--space-2);
+    }
+}
+
+@media (max-width: 980px) {
+    .topnav-name,
+    .topnav-alias {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .topnav-profile {
+        padding: var(--space-1);
+    }
 }
 
 .inline-form {
@@ -192,8 +284,11 @@ body::before {
     background: rgba(255, 255, 255, .05);
     border: 1px solid var(--glass-line);
     border-radius: var(--radius-pill);
+    /* It is worn by a <button> as often as by an <a> (the logout control), and
+       in the first case the button's own glass would arrive with it. */
+    box-shadow: none;
     cursor: pointer;
-    transition: color var(--transition-fast), background var(--transition-fast);
+    transition: color var(--transition-control), background var(--transition-control);
 }
 
 .link-button:hover {
@@ -206,8 +301,14 @@ body::before {
 
 /* Burger: a native <details> toggle, no JavaScript involved. ---------------- */
 
+/* A round, fully translucent control -- the header's one button. It is
+   `<details>`, so it opens and closes with no script at all, and the panel
+   below is a real dropdown rather than a modal: a menu of links does not need
+   the top layer, and a menu that never opens without a script would be worse
+   than a plain list of links. */
 .burger {
     position: relative;
+    flex: 0 0 auto;
 }
 
 .burger > summary {
@@ -217,12 +318,15 @@ body::before {
     width: 2.5rem;
     height: 2.5rem;
     color: var(--text);
-    background: rgba(255, 255, 255, .05);
+    background: rgba(255, 255, 255, .08);
     border: 1px solid var(--glass-line);
-    border-radius: var(--radius-pill);
+    border-radius: 50%;
+    box-shadow: var(--glass-highlight);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     cursor: pointer;
     list-style: none;
-    transition: background var(--transition-fast);
+    transition: background var(--transition-control), border-color var(--transition-control);
 }
 
 .burger > summary::-webkit-details-marker {
@@ -235,67 +339,134 @@ body::before {
 
 .burger[open] > summary,
 .burger > summary:hover {
-    background: rgba(255, 255, 255, .1);
+    background: var(--control-hover);
+    border-color: var(--control-line);
 }
 
+/* The drawer: a wider pane than a menu needs to be, because the thing is not
+   only a list of links -- it carries who made the site and the way in to the
+   team, and it is the only place on a phone that says either. */
 .burger-panel {
     position: absolute;
     top: calc(100% + var(--space-2));
     right: 0;
     z-index: 20;
-    min-width: 12rem;
-    padding: var(--space-2);
-    background: var(--glass-strong);
-    border: 1px solid var(--glass-line);
-    border-radius: var(--radius-m);
+    width: 18rem;
+    max-width: calc(100vw - 2rem);
+    padding: var(--space-4);
+    background: var(--glass-sheen), rgba(22, 22, 24, .90);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: var(--radius-l);
     box-shadow: var(--shadow-glass);
-    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+}
+
+.burger[open] .burger-panel {
+    animation: drawer-in var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+@keyframes drawer-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(.97);
+    }
+}
+
+.burger-title {
+    margin-bottom: var(--space-1);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    letter-spacing: 0.04em;
+    color: var(--cream);
+}
+
+.burger-section {
+    padding-top: var(--space-3);
+    margin-top: var(--space-3);
+    border-top: 1px solid var(--glass-line);
+}
+
+.burger-section > .hint {
+    margin-bottom: var(--space-2);
 }
 
 .burger-panel a,
 .burger-panel .link-button {
     display: block;
     width: 100%;
+    margin: 0;
     padding: var(--space-2) var(--space-3);
+    font: inherit;
+    font-weight: 500;
     color: var(--text);
     background: none;
     border: none;
     border-radius: var(--radius-s);
+    box-shadow: none;
     text-align: left;
+    transition: background var(--transition-fast);
 }
 
 .burger-panel a:hover,
 .burger-panel .link-button:hover {
+    color: var(--text);
     background: rgba(255, 255, 255, .08);
+    transform: none;
 }
 
 /* Bottom mobile bar -------------------------------------------------------- */
 
-/* A floating pill of glass, inset from the screen edges the way a modern iOS
-   tab bar is: it reads as a control sitting on top of the page rather than a
-   slab welded to the bottom of it. */
+/* A floating capsule of glass, inset from the screen edges the way a modern
+   iOS tab bar is: it reads as a control sitting on top of the page rather than
+   a slab welded to the bottom of it. The fill is the one dark surface lighter
+   than the page (--dock in theme.css) -- at the page's own colour the capsule
+   would be invisible over a page that is already that colour, and the whole
+   point of a Dock is that you can see its edges.
+
+   The material is the same white-at-an-alpha the panels wear, at 6% with a
+   24px blur: what holds the text behind it back is the frost, not darkness.
+   That is why there is no SVG filter here -- refraction would be WebKit-only
+   and would repaint the page under the bar on every scroll (theme.css). */
 .bottomnav {
     position: fixed;
-    right: max(var(--space-3), env(safe-area-inset-right));
-    bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
-    left: max(var(--space-3), env(safe-area-inset-left));
+    right: max(var(--space-4), env(safe-area-inset-right));
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    left: max(var(--space-4), env(safe-area-inset-left));
     z-index: 30;
     display: flex;
     align-items: stretch;
-    justify-content: space-around;
+    /* `space-between` with equal padding and `flex: 1 1 0` on every tab: the
+       five tabs divide the bar exactly, so the first and the last sit the same
+       distance from their edges and neither runs off the end. */
+    justify-content: space-between;
     gap: var(--space-1);
+    /* Same inset on all four sides, so the first and the last tab sit the same
+       distance from their edges -- and the same inset the blob is placed
+       against (see --space-1 in .bottomnav__blob). */
     padding: var(--space-1);
     max-width: 30rem;
     margin: 0 auto;
-    background: var(--glass-strong);
-    border: 1px solid var(--glass-line);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-glass), var(--glass-highlight);
-    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    /* A finger rubbed sideways along the bar drives the magnifier, so sideways
+       movement here is not a scroll and the browser is told as much: without
+       it the gesture is claimed by the page after a few pixels and the icons
+       are left mid-growth. Up and down still scrolls -- the bar is thin and a
+       page is easy to catch on it. */
+    touch-action: pan-y;
+    background: var(--glass-sheen), var(--dock);
+    border: 1px solid var(--dock-line);
+    border-radius: var(--radius-dock);
+    /* Two shadows: the wide one is what lifts the capsule off the page, the
+       rim is what makes its top edge read as a lit piece of glass. */
+    box-shadow: var(--dock-shadow), var(--glass-highlight);
+    backdrop-filter: blur(var(--dock-blur)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(180%);
 }
 
+/* Every tab carries the same transparent hairline as the selected one, so the
+   border appearing on the selected tab moves nothing: a border that only
+   exists in one state changes the box's inner width by two pixels and the
+   label jumps sideways the moment the tab is picked. */
 .bottomnav > a,
 .bottomnav > span {
     flex: 1 1 0;
@@ -307,19 +478,198 @@ body::before {
     min-height: 2.9rem;
     padding: var(--space-2) var(--space-1);
     color: var(--text-dim);
-    border-radius: var(--radius-m);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-dock-tab);
     font-size: 0.68rem;
     line-height: 1;
-    transition: color var(--transition-fast), background var(--transition-fast);
+    transition: color var(--transition-fast), background var(--transition-fast),
+                border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .bottomnav > a:hover {
     color: var(--text);
 }
 
+/* The press is felt, not just seen: the whole tab gives under the finger. */
+.bottomnav > a:active {
+    transform: scale(.95);
+}
+
+/* The selected tab: a capsule of thicker glass sitting inside the dock, with
+   its own rim -- the way a segmented control reads on iOS. No colour: the
+   selection is the same material with more of it. */
 .bottomnav .is-active {
     color: #fff;
-    background: linear-gradient(160deg, rgba(10, 132, 255, .85), rgba(109, 94, 252, .8));
+    background: var(--glass-sheen), var(--control-hover);
+    border-color: var(--control-line);
+    box-shadow: var(--glass-highlight);
+}
+
+/* The selected tab as a drop of light ------------------------------------- */
+
+/* Without the script each tab carries its own gradient (the rule above), which
+   is the whole effect and looks perfectly fine. With the script the gradient
+   moves out of the tab and into one blob that glides from tab to tab -- the
+   selected tab stops being *painted* selected and starts *being* selected, the
+   way a segmented control behaves. `is-js` is set by static/swipe.js, so the
+   fallback above is what runs if the script never loads. */
+/* It has to cover exactly the tab it stands for. `top` and `bottom` are measured
+   from the padding box, which is where the flex tabs begin, so they are the
+   bar's own padding and nothing else; for the same reason the script takes the
+   border off the horizontal distance it measures. */
+.bottomnav__blob {
+    position: absolute;
+    top: var(--space-1);
+    bottom: var(--space-1);
+    left: 0;
+    z-index: 0;
+    width: 0;
+    /* The selected tab is a capsule of thicker glass, not a coloured pill: the
+       whole bar is white-at-an-alpha, and the selection is the same material
+       with more of it. It is the very shape the tab itself wears without the
+       script -- same corner, same rim -- so the highlight arrives as the same
+       object and only stops being painted per tab. */
+    background: var(--glass-sheen), var(--control-hover);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-dock-tab);
+    box-shadow: var(--glass-highlight);
+    pointer-events: none;
+    /* `scale` travels with the transform and never inside it: the script
+       rewrites `transform` frame by frame while the finger is down, and a lift
+       folded into that value would be wiped out by the very movement it is
+       meant to accompany. As its own property the two compose -- so the pill
+       glides and swells at once, and the spring carries both home on release. */
+    transition: transform var(--transition-spring), scale var(--transition-spring),
+                width var(--transition-spring), opacity var(--transition-fast);
+}
+
+/* Laid down the first time without travelling from nowhere. */
+.bottomnav__blob.is-instant {
+    transition: none;
+}
+
+/* Under the finger the pill lifts: the same capsule, a little larger, so the
+   drag has a body to it and the eye can see which tab the finger is over
+   before it lets go -- the tab it will land on. `is-swiping` is put on the bar
+   by static/swipe.js for exactly as long as the gesture lasts.
+
+   1.12 about the centre grows the pill by 6% of its own width on each side --
+   about 3.5px on a phone, against the 4px of the bar's own padding, so the
+   pill swells inside the capsule instead of spilling over its edge. */
+.bottomnav.is-swiping .bottomnav__blob {
+    transform-origin: center;
+    scale: 1.12;
+    transition: none;
+}
+
+/* The magnifier (values come from static/swipe.js) ------------------------- */
+
+/* A finger on the bar enlarges the tab under it and, less, its neighbours --
+   growth that falls off with distance, which is the whole trick of a Dock. The
+   script rewrites --dock-scale and --dock-lift on each icon as the pointer
+   moves; all CSS has to say is how a change of those two values looks.
+
+   Transform only. At full size an icon is taller than the line it sits on, so
+   it overlaps its own label a little -- and nothing in the bar reflows, which
+   is what keeps the labels still while the icon above them swells. */
+.bottomnav .icon {
+    transform: translateY(var(--dock-lift, 0)) scale(var(--dock-scale, 1));
+    transition: transform 380ms var(--transition-spring);
+}
+
+/* Under the finger the values change every frame and a transition would only
+   lag a frame behind them; the spring above is for letting go. */
+.bottomnav.is-magnifying .icon {
+    transition: none;
+}
+
+.bottomnav.is-js > a,
+.bottomnav.is-js > span {
+    position: relative;
+    z-index: 1;
+}
+
+/* With the script the tab hands all three of those to the blob, which is now
+   the capsule that travels. */
+.bottomnav.is-js .is-active {
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* Page transitions (put there by static/swipe.js) -------------------------- */
+
+/* A swipe is a gesture between two *pages*, and the browser has to fetch the
+   next one, so the old page cannot be dragged off screen -- there would be
+   nothing behind it. Instead the two halves are faked: the page being left
+   slides out and dims for a moment, and the page being arrived at slides in
+   from the side the finger came from. Short enough to overlap with the load,
+   long enough that the eye reads the two as one movement. */
+
+/* The page is the one thing on this site that moves as a whole, so it is the
+   one place a transform is worth animating: the spring below is what carries a
+   half-finished swipe back to where it started instead of snapping it there. */
+main {
+    transition: transform var(--transition-spring), opacity var(--transition-fast);
+}
+
+/* While the finger is on it, no transition at all -- the page has to sit
+   exactly where the finger is, and a spring under a moving finger lags. */
+main.is-dragging {
+    transition: none;
+}
+
+main.is-dragging,
+main.is-swipe-out-next,
+main.is-swipe-out-prev,
+main.nav-in-next,
+main.nav-in-prev {
+    will-change: transform, opacity;
+}
+
+main.is-swipe-out-next {
+    animation: page-out-left 200ms cubic-bezier(.4, 0, .7, .2) both;
+}
+
+main.is-swipe-out-prev {
+    animation: page-out-right 200ms cubic-bezier(.4, 0, .7, .2) both;
+}
+
+main.nav-in-next {
+    animation: page-in-right var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+main.nav-in-prev {
+    animation: page-in-left var(--transition-slow) cubic-bezier(.32, .72, 0, 1) both;
+}
+
+@keyframes page-out-left {
+    to {
+        opacity: .35;
+        transform: translate3d(-12%, 0, 0);
+    }
+}
+
+@keyframes page-out-right {
+    to {
+        opacity: .35;
+        transform: translate3d(12%, 0, 0);
+    }
+}
+
+@keyframes page-in-right {
+    from {
+        opacity: 0;
+        transform: translate3d(9%, 0, 0);
+    }
+}
+
+@keyframes page-in-left {
+    from {
+        opacity: 0;
+        transform: translate3d(-9%, 0, 0);
+    }
 }
 
 /* Admin navigation --------------------------------------------------------- */
@@ -359,33 +709,95 @@ body::before {
     background: var(--accent-soft);
 }
 
-/* Responsive switch: top bar on wide screens, bottom bar on phones. --------- */
+/* Responsive switch: the dock on phones, the same tabs in the header on wide
+   screens. ---------------------------------------------------------------- */
 
+/* A wide screen has no room for a floating capsule of tabs at the foot of a
+   72rem column: the header is already there, in a line, with the wordmark. */
 @media (min-width: 768px) {
-    .topnav {
-        display: block;
-    }
-
     .bottomnav {
         display: none;
     }
 }
 
+/* The header is on every width, but it does not carry the same things. On a
+   phone the dock below is the navigation, so the header keeps only what the
+   dock cannot hold: the wordmark, and the menu. Duplicating five links into a
+   header that already has five under it is how a phone ends up with two
+   navigations and no room for the page. */
 @media (max-width: 767px) {
-    .topnav {
+    .topnav-links,
+    .topnav-scan,
+    .topnav-profile {
         display: none;
+    }
+
+    .topnav-user {
+        margin-left: auto;
     }
 
     .bottomnav {
         display: flex;
     }
 
-    .container {
-        padding-top: var(--space-4);
+    /* The bar floats over the page, so the page has to end above it -- and by
+       more than the bar's own height. The last row of a feed is a control (a
+       pagination link, the composer's button), and a control whose bottom edge
+       is flush with the top of the dock is a control that is half pressed
+       already: hence the whole clearance, bar plus inset plus a thumb's worth
+       of air (--dock-clearance in theme.css). */
+    body {
+        padding-bottom: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
     }
 
-    body {
-        /* keep the floating bar from covering the last post */
-        padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-5));
+    /* The scroll edge: content does not stop at the tab bar, it dissolves under
+       it. A page that ends in a hard cut just above a floating control looks
+       like the control was pasted on; a page that fades looks continuous. This
+       sits over the content (taps pass through it) and under the bar, which
+       keeps its own crisp edge. */
+    body::after {
+        content: "";
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 29;
+        height: calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, var(--bg) 26%, rgba(9, 9, 11, 0) 100%);
+        pointer-events: none;
+    }
+}
+
+/* Motion ------------------------------------------------------------------- */
+
+/* The page transitions and the tab press are the decoration on top of the
+   decoration: a reader who asked for no movement gets the navigation, just
+   without the travel. */
+@media (prefers-reduced-motion: reduce) {
+    main,
+    main.is-dragging {
+        transition: none;
+    }
+
+    main.is-swipe-out-next,
+    main.is-swipe-out-prev,
+    main.nav-in-next,
+    main.nav-in-prev {
+        animation: none;
+    }
+
+    .bottomnav > a:active,
+    .topnav-links a:active {
+        transform: none;
+    }
+
+    .bottomnav__blob,
+    .bottomnav .icon,
+    .burger-panel {
+        transition: none;
+    }
+
+    .burger[open] .burger-panel {
+        animation: none;
     }
 }

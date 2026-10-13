@@ -38,19 +38,12 @@ PAGE_SIZE = 20
 def _body_error_message(
     reason: feed_service.FeedError | None, max_length: int, retry_after: int = 0
 ) -> str:
-    """Human-readable refusal message for a failed create attempt."""
-    if reason is feed_service.FeedError.EMPTY:
-        return "Текст не может быть пустым"
-    if reason is feed_service.FeedError.TOO_LONG:
-        return f"Слишком длинно: максимум {max_length} символов"
-    if reason is feed_service.FeedError.RATE_LIMITED:
-        return f"Слишком часто. Попробуйте снова через {retry_after} с."
-    if reason is feed_service.FeedError.PII_BLOCKED:
-        return (
-            "В тексте есть данные, которые нельзя публиковать: телефоны, "
-            "адреса почты, ссылки и мессенджеры. Уберите их и отправьте снова."
-        )
-    return "Не удалось сохранить"
+    """Human-readable refusal message for a failed create attempt.
+
+    The wording lives in the service, not here: the async endpoint refuses the
+    same attempts and has to say the same thing (see app.services.feed).
+    """
+    return feed_service.refusal_message(reason, max_length, retry_after)
 
 
 def _refusal_status(

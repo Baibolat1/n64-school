@@ -2,6 +2,7 @@
 {% import "_macros.html" as ui %}
 {% block title %}Ассистент{% endblock %}
 {% block content %}
+{% set source_labels = {'db': 'база школы', 'llm': 'модель', 'help': 'подсказка'} %}
 <div class="page-head">
     <div>
         <p class="eyebrow">Помощник</p>
@@ -13,30 +14,58 @@
     </span>
 </div>
 
-<section class="glass">
-    <p class="hint">
-        Сначала я ищу ответ в базе школы — расписание, домашнее задание, учителя
-        и турниры. Это бесплатно и мгновенно.
-        {% if llm_ready %}
-        Если в базе ответа нет, тот же вопрос уйдёт модели.
-        {% else %}
-        Свободные вопросы я пока не умею: ключ модели не настроен.
+{# Разговор, а не форма с ответом под ней: реплики стоят в том порядке, в каком
+   их сказали, и новая дописывается в конец. Ровно этот же блок сервер отдаёт
+   разметкой на запрос скрипта, поэтому ответ, пришедший без перезагрузки, и
+   ответ, пришедший с ней, выглядят одинаково (см. app.routers.api). #}
+<section class="glass chat-wrap">
+    <div class="chat" id="chat">
+        <article class="bubble bubble--assistant">
+            <div class="md">
+                Сначала я ищу ответ в базе школы — расписание, домашнее задание,
+                учителя и турниры. Это бесплатно и мгновенно.
+                {% if llm_ready %}
+                Если в базе ответа нет, тот же вопрос уйдёт модели.
+                {% else %}
+                Свободные вопросы я пока не умею: ключ модели не настроен.
+                {% endif %}
+                Личные данные в вопрос лучше не писать.
+            </div>
+        </article>
+
+        {% if answer %}
+        {# Ответ, пришедший обычной отправкой формы: без скрипта страница
+           перерисовывается целиком, и разговор на ней — эти же две реплики. #}
+        <article class="bubble bubble--user">
+            <div class="md">{{ question }}</div>
+        </article>
+        <article class="bubble bubble--assistant">
+            <div class="md">{{ markdown(answer) }}</div>
+            <p class="bubble-source">{{ source_labels.get(answer_source, '') }}</p>
+        </article>
         {% endif %}
-        Личные данные в вопрос лучше не писать.
-    </p>
+    </div>
 
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <p class="error" role="alert" data-error-slot hidden></p>
 
-    <form method="post" action="/assistant" class="stacked-form">
+    <form method="post" action="/assistant" class="stacked-form"
+          data-async="assistant" data-api="/api/assistant">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label for="question">Ваш вопрос</label>
-        <textarea id="question" name="question" rows="3"
+        <label class="visually-hidden" for="question">Ваш вопрос</label>
+        <textarea id="question" name="question" rows="2"
                   maxlength="{{ max_question_length }}"
                   placeholder="Например: что задали по алгебре на завтра?"
                   required>{{ question or '' }}</textarea>
-        <button type="submit">{{ ui.icon('send') }} Спросить</button>
+
+        <div class="composer-foot">
+            <button type="submit">{{ ui.icon('send') }} Спросить</button>
+        </div>
     </form>
 
+    {# Подсказки — кнопки, а не подписи: нажатие подставляет вопрос в поле и
+       отправляет его той же формой, поэтому идёт тем же путём, что и набранный
+       руками. Без скрипта это просто текст (type="button" ничего не отправляет). #}
     <div class="suggest">
         {% for sample in [
             'Расписание на сегодня',
@@ -44,21 +73,8 @@
             'Какие турниры по CS2',
             'Что ты умеешь',
         ] %}
-        <span class="chip chip--ghost">{{ sample }}</span>
+        <button type="button" class="chip chip--ghost" data-ask>{{ sample }}</button>
         {% endfor %}
     </div>
 </section>
-
-{% if answer %}
-<article class="glass answer" id="answer">
-    <header class="answer-head">
-        {{ ui.icon('sparkles') }}
-        <h2>Ответ</h2>
-        <span class="answer-source">
-            {% if answer_source == 'llm' %}модель{% elif answer_source == 'db' %}база школы{% else %}подсказка{% endif %}
-        </span>
-    </header>
-    <p class="answer-body">{{ answer }}</p>
-</article>
-{% endif %}
 {% endblock %}

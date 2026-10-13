@@ -19,6 +19,7 @@ from app.schemas.admin import AdminLogin, AdminOut
 from app.services import admin_auth
 from app.services import invites as invites_service
 from app.services import login_throttle
+from app.services import team as team_service
 
 router = APIRouter(
     prefix="/admin", tags=["admin"], dependencies=[Depends(require_csrf)]
@@ -115,6 +116,39 @@ def dashboard(
             "open_pii_flags": pii_flags_repo.count_open(db),
             "pii_blocked_attempts": pii_blocked_repo.count_all(db),
             "banned_students": students_repo.count_banned(db),
+            "dev_applications": team_service.count_applications(db),
+        },
+    )
+
+
+@router.get("/dev-applications", response_class=HTMLResponse)
+def dev_applications_page(
+    request: Request,
+    admin: Admin = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Students who offered to help build the site.
+
+    Read-only on purpose: an application is an offer, and the answer to it is a
+    message in Telegram, not a status a moderator changes here. The page exists
+    so that the offers are visible at all -- a form whose answers nobody can read
+    is a form that lies to whoever filled it in.
+
+    The aliases come back in one query for the whole page, like the avatars in
+    the feed: applications are shown with the alias the student had when the
+    page was rendered, not a snapshot taken when they applied.
+    """
+    applications = team_service.list_applications(db)
+    return templates.TemplateResponse(
+        request,
+        "admin/dev_applications.html",
+        {
+            "admin": AdminOut.model_validate(admin),
+            "applications": applications,
+            "aliases": students_repo.aliases_by_id(
+                db, [application.student_id for application in applications]
+            ),
+            "role_label": team_service.role_label,
         },
     )
 

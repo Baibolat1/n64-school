@@ -42,6 +42,30 @@ MAX_COMMENT_LENGTH = 2000
 FeedError = PublishError
 
 
+def refusal_message(
+    reason: FeedError | None, max_length: int, retry_after: int = 0
+) -> str:
+    """Human-readable sentence for a refused create attempt.
+
+    Here rather than in a router because there are two ways in now -- the form
+    that reloads the page and the async endpoint that does not (see
+    app.routers.api) -- and a student must not be told two different things
+    about the same refusal depending on whether their browser ran a script.
+    """
+    if reason is FeedError.EMPTY:
+        return "Текст не может быть пустым"
+    if reason is FeedError.TOO_LONG:
+        return f"Слишком длинно: максимум {max_length} символов"
+    if reason is FeedError.RATE_LIMITED:
+        return f"Слишком часто. Попробуйте снова через {retry_after} с."
+    if reason is FeedError.PII_BLOCKED:
+        return (
+            "В тексте есть данные, которые нельзя публиковать: телефоны, "
+            "адреса почты, ссылки и мессенджеры. Уберите их и отправьте снова."
+        )
+    return "Не удалось сохранить"
+
+
 @dataclass(frozen=True)
 class PostCreateResult:
     """Outcome of a post creation attempt.

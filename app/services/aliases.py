@@ -231,6 +231,32 @@ def can_change_alias(student: Student) -> tuple[bool, datetime | None]:
     return False, retry_at
 
 
+def refusal_message(result: AliasChangeResult) -> str:
+    """Human-readable sentence for a refused alias change.
+
+    Here rather than in a router because two of them refuse the same change --
+    the form on /me and the async endpoint the script uses -- and the student
+    deserves the same sentence from both (see app.routers.api).
+    """
+    if result.reason is AliasError.TAKEN:
+        return "Псевдоним занят"
+    if result.reason is AliasError.TOO_SHORT:
+        return "Слишком короткий: минимум 3 символа"
+    if result.reason is AliasError.TOO_LONG:
+        return "Слишком длинный: максимум 24 символа"
+    if result.reason is AliasError.LEADING_DIGIT:
+        return "Псевдоним не может начинаться с цифры"
+    if result.reason is AliasError.INVALID_CHARS:
+        return "Недопустимые символы: буквы, цифры, пробел, дефис и подчёркивание"
+    if result.reason is AliasError.RESERVED:
+        return "Такое имя использовать нельзя"
+    if result.reason is AliasError.COOLDOWN:
+        days = settings.ALIAS_CHANGE_COOLDOWN_DAYS
+        when = result.retry_at.strftime("%d.%m.%Y") if result.retry_at else "позже"
+        return f"Псевдоним можно менять раз в {days} дней. Следующая попытка — {when}"
+    return "Не удалось изменить псевдоним"
+
+
 def set_alias(db: Session, student: Student, raw_alias: str) -> AliasChangeResult:
     """Validate and persist a manual alias change for ``student``.
 

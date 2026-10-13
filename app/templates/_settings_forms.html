@@ -1,0 +1,56 @@
+{# Обе формы настроек в одном партиале: их показывает и окно на /me, и
+   отдельная страница /me/settings. Один источник, потому что разойтись они не
+   должны — ученик правит одно и то же, придя с любой стороны; а страница
+   существует ради браузера без скрипта, для которого окно не открывается.
+
+   Каждая группа несёт свой слот отказа: скрипт пишет сообщение рядом с той
+   формой, которая его заслужила, а не над обеими (см. app/static/app.js). #}
+{% import "_macros.html" as ui %}
+
+<div class="settings-group">
+    <h3>Псевдоним</h3>
+    {% if can_change %}
+    <p class="hint">Виден всем в ленте. Менять можно не чаще, чем раз в
+        {{ cooldown_days }} дней.</p>
+    <p class="error" role="alert" data-error-slot hidden></p>
+    <form method="post" action="/me/alias" class="stacked-form"
+          data-async="alias" data-api="/api/me/alias">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="new_alias">Новый псевдоним</label>
+        <input id="new_alias" name="new_alias" type="text" maxlength="24"
+               autocomplete="off" value="{{ alias_value }}" required>
+
+        <button type="submit">Сохранить</button>
+    </form>
+    {% else %}
+    <p class="warning">Псевдоним можно менять не чаще, чем раз в {{ cooldown_days }} дней.
+        Следующая попытка — {{ retry_at.strftime('%d.%m.%Y') if retry_at else 'позже' }}.</p>
+    {% endif %}
+</div>
+
+<div class="settings-group">
+    <h3>Аватарка</h3>
+    <p class="hint">Картинка показывается рядом с псевдонимом в ленте, на странице поста
+        и в отзывах. Менять её можно сколько угодно раз. Под анонимными записями
+        картинка не показывается: там всегда кружок.</p>
+
+    <p class="error" role="alert" data-error-slot hidden></p>
+    <form method="post" action="/me/avatar" data-async="avatar" data-api="/api/me/avatar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="avatar-picker">
+            <label class="avatar-option">
+                <input type="radio" name="avatar_key" value=""{% if not student.avatar_key %} checked{% endif %}>
+                {{ ui.avatar(student.alias, 'lg', None) }}
+                <span class="visually-hidden">Без картинки</span>
+            </label>
+            {% for key in avatar_options() %}
+            <label class="avatar-option">
+                <input type="radio" name="avatar_key" value="{{ key }}"{% if student.avatar_key == key %} checked{% endif %}>
+                {{ ui.avatar(student.alias, 'lg', key) }}
+                <span class="visually-hidden">{{ avatar_label(key) }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit">Сохранить</button>
+    </form>
+</div>

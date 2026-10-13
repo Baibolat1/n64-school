@@ -2,8 +2,34 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {# `viewport-fit=cover` -- не деталь: без него env(safe-area-inset-*) в
+       Safari равны нулю, и вся разметка под вырез экрана (нижнее меню,
+       отступы шапки) просто не работает. #}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{% block title %}Hub 64 — закрытый хаб школы №64{% endblock %}</title>
+
+    {# Установка на домашний экран. Манифест описывает оболочку: start_url «/» --
+       это тот же вход, что и по адресу сайта, он же ведёт вошедшего в ленту
+       (см. app.routers.auth.index). display: standalone убирает адресную строку,
+       и переходы по сайту остаются внутри открытого приложения: ссылок наружу и
+       target="_blank" в шаблонах нет, а вход в аккаунт свой, без внешних
+       провайдеров, -- поэтому из оболочки никуда не выбрасывает и сессия
+       (постоянная кука, см. _set_session_cookie) в ней живёт.
+
+       Теги apple-* -- для iOS: она манифест читает (с 16.4), но имя, значок и
+       строку состояния берёт отсюда, а не из него. black-translucent -- значит
+       фон уходит под прозрачную строку состояния: отсюда safe-area отступы
+       наверху у шапки, страницы и экрана входа. Старые имена (apple-*) стоят
+       вместе с новым mobile-web-app-capable: его читают Chrome и Android. #}
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Hub 64">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/img/icon-192.png">
+
     <link rel="stylesheet" href="/static/css/theme.css">
     <link rel="stylesheet" href="/static/css/layout.css">
     <link rel="stylesheet" href="/static/css/components.css">
@@ -18,6 +44,19 @@
     </main>
     {% if student %}
     {% include "_bottomnav.html" %}
+    {# Всплывающее сообщение: единственный слот на всю страницу. Он один, потому
+       что два сообщения подряд — это стена текста над нижним меню, а приходит
+       в него всегда одно и то же действие (см. app/static/app.js). #}
+    <div class="toast-host" id="toast-host" role="status" aria-live="polite"></div>
+    {# Всё, что делается без перехода на другую страницу: лайк, публикация,
+       комментарий, вопрос ассистенту, аватарка, псевдоним, заявка в команду.
+       Прогрессивное улучшение — у каждой формы остаётся настоящий action, и без
+       этого файла она отправляется как обычная форма (см. app/static/app.js). #}
+    <script src="/static/app.js"></script>
+    {# Жесты нижнего меню: свайп между разделами и «жидкая» таблетка на активном
+       пункте. Прогрессивное улучшение — без этого файла меню и навигация
+       работают ровно так же, только без движения (см. app/static/swipe.js). #}
+    <script src="/static/swipe.js"></script>
     {% endif %}
 </body>
 </html>
