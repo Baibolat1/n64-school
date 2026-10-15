@@ -54,3 +54,37 @@
         <button type="submit">Сохранить</button>
     </form>
 </div>
+
+{# Класс. Здесь не поле ввода, а список классов школы: класс -- это ключ к
+   расписанию, домашке и составу класса, и опечатка («9б» вместо «9Б») дала бы
+   пустой экран без объяснения, почему он пуст. Список ведёт школа: он собран из
+   её расписания (см. app.services.classes), поэтому выбрать можно только то,
+   что школа действительно знает. #}
+<div class="settings-group">
+    <h3>Класс</h3>
+    {% if class_options %}
+    <p class="hint">По классу показываются расписание, домашнее задание и
+        одноклассники. Кроме вас его не видит никто: в ленте и отзывах — только
+        псевдоним.</p>
+    <p class="error" role="alert" data-error-slot hidden></p>
+    <form method="post" action="/me/class" class="stacked-form"
+          data-async="class" data-api="/api/me/class">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="class_name">Ваш класс</label>
+        <select id="class_name" name="class_name">
+            <option value=""{% if not class_value %} selected{% endif %}>Не указан</option>
+            {% for name in class_options %}
+            <option value="{{ name }}"{% if class_value == name %} selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Сохранить</button>
+    </form>
+    {% else %}
+    {# Пустой список -- состояние школы, а не ошибка ученика: классов нет, пока
+       нет расписания. Формы тут нет нарочно: выпадающий список из одного «Не
+       указан» показывал бы выбор, которого нет, а отказ объяснял бы его
+       ученику, который ничего не сделал. #}
+    <p class="hint">Список классов появится, когда школа загрузит расписание.
+        Тогда класс можно будет выбрать здесь.</p>
+    {% endif %}
+</div>

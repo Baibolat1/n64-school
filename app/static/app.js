@@ -471,6 +471,25 @@
         });
     }
 
+    // The class is written back into the row that names it on the profile, the
+    // same words the server would print on the next visit. A cleared class says
+    // "Класс не указан" rather than leaving the row empty: the row is also the
+    // door to the section, and a door with no sign on it explains nothing. The
+    // wording is shared with the template by hand -- the two are three words
+    // long and change together.
+    function classHandler(form) {
+        return send(form).then(function (result) {
+            if (refused(form, result.payload)) return;
+
+            const row = document.getElementById("profile-class");
+            if (row) row.textContent = result.payload.class_name || "Класс не указан";
+
+            clearError(form);
+            closeSheet(form);
+            toast(result.payload.message || "Класс сохранён");
+        });
+    }
+
     /* The dev team --------------------------------------------------------------- */
 
     function teamHandler(form) {
@@ -493,6 +512,7 @@
         assistant: assistantHandler,
         avatar: avatarHandler,
         alias: aliasHandler,
+        class: classHandler,
         team: teamHandler,
     };
 

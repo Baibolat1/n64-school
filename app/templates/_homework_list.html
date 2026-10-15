@@ -1,0 +1,24 @@
+{# Домашнее задание одной панелью на два экрана: расписание показывает всё
+   заданное за неделю, «Мой класс» -- ближайшее к сегодняшнему дню. Разметка
+   строки одна и та же, поэтому и лежит одним местом.
+
+   Ждёт в контексте: ``homework`` (список заданий) и ``today_date`` -- по нему
+   подсвечивается то, что сдавать уже сегодня. #}
+{% import "_macros.html" as ui %}
+
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('book') }}<h2>Домашнее задание</h2></div>
+    {% if homework %}
+    <ul class="hw-list">
+        {% for item in homework %}
+        <li class="hw-item{% if item.due_date == today_date %} hw-item--today{% endif %}">
+            <span class="hw-subject">{{ item.subject }}</span>
+            <span class="hw-body">{{ item.body }}</span>
+            <span class="hw-due">{{ item.due_date.strftime('%d.%m') }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">На ближайшие дни ничего не задано.</p>
+    {% endif %}
+</section>

@@ -551,10 +551,13 @@ def test_the_profile_is_one_list_of_rows(student):
     html = student.client.get("/me").text
     main = re.search(r'<main class="container">(.*)</main>', html, re.S).group(1)
 
-    # Six sections and the invitation: each one a row with its own chevron, and
-    # the settings row with a chevron too -- eight rows that lead somewhere.
-    assert len(re.findall(r'class="list-row list-row--link"', main)) == 7
-    assert main.count("icon--chevron") == 8
+    # The class, six sections and the invitation: each one a row with its own
+    # chevron, and the settings row with a chevron too -- nine rows that lead
+    # somewhere. The class row sits above the sections and outside the dock (see
+    # app.routers.auth): the section is opened from the profile, like the
+    # settings, and the dock keeps its five links.
+    assert len(re.findall(r'class="list-row list-row--link"', main)) == 8
+    assert main.count("icon--chevron") == 9
 
     # The way out is a row as well, and the only red one: it is the one thing on
     # the screen that cannot be undone.
@@ -563,7 +566,7 @@ def test_the_profile_is_one_list_of_rows(student):
 
     # The captions are over the groups, not headings inside them -- one per
     # group, and the awards group only exists for a student who has a badge.
-    assert main.count('class="list-head"') == 4
+    assert main.count('class="list-head"') == 5
     assert "link-grid" not in main
 
     # And the two sheets still open from their rows.

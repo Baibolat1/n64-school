@@ -1,0 +1,45 @@
+{# «Сегодня» -- одна панель на два экрана: расписание и «Мой класс». Отдельным
+   партиалом, а не копией: день недели, заметки к уроку и вид пустого дня --
+   ровно то, что разошлось бы между страницами при первой же правке.
+
+   Ждёт в контексте: ``today_weekday`` (None -- воскресенье), ``today_lessons``,
+   ``day_labels``. Заметки необязательны: их показывает только расписание, и
+   ``notes`` у экрана класса просто нет. #}
+{% import "_macros.html" as ui %}
+
+{% if today_weekday %}
+<section class="glass glass--hero">
+    <div class="hero-head">
+        {{ ui.icon('calendar') }}
+        <h2>Сегодня · {{ day_labels[today_weekday] }}</h2>
+    </div>
+    {% if today_lessons %}
+    <ol class="timeline">
+        {% for lesson in today_lessons %}
+        <li class="timeline-item">
+            <span class="timeline-time">{{ lesson.starts_at }}<small>{{ lesson.ends_at }}</small></span>
+            <span class="timeline-body">
+                <span class="timeline-subject">{{ lesson.subject }}</span>
+                {% if lesson.room %}<span class="timeline-room">{{ ui.icon('pin') }} {{ lesson.room }}</span>{% endif %}
+            </span>
+            <span class="timeline-index">{{ lesson.lesson_no }}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">Сегодня уроков нет — отдыхайте.</p>
+    {% endif %}
+    {% if notes %}
+    <ul class="notes">
+        {% for note in notes %}
+        <li>{{ note.body }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% else %}
+<section class="glass glass--hero">
+    <div class="hero-head">{{ ui.icon('calendar') }}<h2>Сегодня · воскресенье</h2></div>
+    <p class="muted">Уроков нет — выходной.</p>
+</section>
+{% endif %}

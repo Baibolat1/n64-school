@@ -104,6 +104,25 @@ def count_banned(db: Session) -> int:
     return db.execute(stmt).scalar_one()
 
 
+def list_classmates(db: Session, class_name: str) -> list:
+    """Одноклассники: id, псевдоним и картинка -- и ничего сверх того.
+
+    Три колонки, а не строка целиком: на экране класса показываются псевдоним и
+    аватарка, и хэшу пароля делать в памяти страницы нечего. Забаненные не
+    попадают в список: роспись класса -- такая же витрина, как лента, и вернуть
+    туда ученика, которого модерация убрала со всего сайта, значило бы отменить
+    её решение.
+
+    Сортировки здесь нет: по-русски её умеет Python, а не SQLite, -- сортирует
+    сервис (``app.services.classes``).
+    """
+    stmt = select(Student.id, Student.alias, Student.avatar_key).where(
+        Student.class_name == class_name,
+        Student.is_banned.is_(False),
+    )
+    return list(db.execute(stmt).all())
+
+
 def avatar_keys_by_id(db: Session, ids: Iterable[int]) -> dict[int, str | None]:
     """Return ``{student_id: avatar_key}`` for the given ids in one query.
 

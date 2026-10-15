@@ -13,66 +13,19 @@
 {% if not student.class_name %}
 <section class="glass">
     <h2>Класс не указан</h2>
-    <p class="hint">Ваш класс не задан в профиле, поэтому расписание и домашнее
-        задание показать нечего. Обратитесь к администратору школы.</p>
+    <p class="hint">Ваш класс не задан, поэтому расписание и домашнее задание
+        показать нечего. Выберите класс в <a href="/me/settings">настройках</a> —
+        рядом с псевдонимом и аватаркой.</p>
 </section>
 {% else %}
 
 {# Сегодняшний день вынесен наверх отдельной панелью: это то, что нужно в
-   девяносто процентов заходов, и ради этого не стоит искать строку в таблице. #}
-{% if today_weekday %}
-<section class="glass glass--hero">
-    <div class="hero-head">
-        {{ ui.icon('calendar') }}
-        <h2>Сегодня · {{ day_labels[today_weekday] }}</h2>
-    </div>
-    {% if today_lessons %}
-    <ol class="timeline">
-        {% for lesson in today_lessons %}
-        <li class="timeline-item">
-            <span class="timeline-time">{{ lesson.starts_at }}<small>{{ lesson.ends_at }}</small></span>
-            <span class="timeline-body">
-                <span class="timeline-subject">{{ lesson.subject }}</span>
-                {% if lesson.room %}<span class="timeline-room">{{ ui.icon('pin') }} {{ lesson.room }}</span>{% endif %}
-            </span>
-            <span class="timeline-index">{{ lesson.lesson_no }}</span>
-        </li>
-        {% endfor %}
-    </ol>
-    {% else %}
-    <p class="muted">Сегодня уроков нет — отдыхайте.</p>
-    {% endif %}
-    {% if notes %}
-    <ul class="notes">
-        {% for note in notes %}
-        <li>{{ note.body }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-</section>
-{% else %}
-<section class="glass glass--hero">
-    <div class="hero-head">{{ ui.icon('calendar') }}<h2>Сегодня · воскресенье</h2></div>
-    <p class="muted">Уроков нет — выходной.</p>
-</section>
-{% endif %}
+   девяносто процентов заходов, и ради этого не стоит искать строку в таблице.
+   Панель и список домашки -- общие с экраном класса (см. _school_today.html и
+   _homework_list.html): один день недели рисуется одним местом. #}
+{% include "_school_today.html" %}
 
-<section class="glass">
-    <div class="hero-head">{{ ui.icon('book') }}<h2>Домашнее задание</h2></div>
-    {% if homework %}
-    <ul class="hw-list">
-        {% for item in homework %}
-        <li class="hw-item{% if item.due_date == today_date %} hw-item--today{% endif %}">
-            <span class="hw-subject">{{ item.subject }}</span>
-            <span class="hw-body">{{ item.body }}</span>
-            <span class="hw-due">{{ item.due_date.strftime('%d.%m') }}</span>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="muted">На ближайшие дни ничего не задано.</p>
-    {% endif %}
-</section>
+{% include "_homework_list.html" %}
 
 <section class="glass">
     <div class="hero-head">{{ ui.icon('calendar') }}<h2>Вся неделя</h2></div>

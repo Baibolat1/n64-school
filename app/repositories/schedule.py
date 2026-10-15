@@ -25,6 +25,21 @@ def list_for_class(db: Session, class_name: str) -> list[ScheduleEntry]:
     return list(db.execute(stmt).scalars().all())
 
 
+def list_class_names(db: Session) -> list[str]:
+    """Классы, по которым у школы есть расписание, -- по разу каждый.
+
+    Отдельного справочника классов нет: класс существует ровно там, где стоит
+    его сетка. Из строк, встреченных где попало (в домашке, в заметках), список
+    не собирается -- класс без уроков обещал бы расписание, которого нет.
+
+    Порядка здесь нет нарочно: SQLite складывает кириллицу по коду, и обычный
+    ``ORDER BY`` поставил бы «10А» перед «8А». Школьный порядок знает сервис
+    (``app.services.classes``).
+    """
+    stmt = select(ScheduleEntry.class_name).distinct()
+    return list(db.execute(stmt).scalars().all())
+
+
 def list_for_day(
     db: Session, class_name: str, day_of_week: int
 ) -> list[ScheduleEntry]:

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Мой класс{% endblock %}
+{% block content %}
+{# Экран одного класса: кто рядом, что сегодня и что задали. Класс берётся из
+   сессии, а не из адреса (см. app.routers.auth): иначе чужую сетку уроков и
+   чужой список псевдонимов можно было бы выпросить прямой ссылкой. #}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Школьный день</p>
+        <h1>Мой класс{% if student.class_name %} · {{ student.class_name }}{% endif %}</h1>
+    </div>
+    <a class="chip" href="/schedule">{{ ui.icon('calendar') }} Всё расписание</a>
+</div>
+
+{% if not student.class_name %}
+{# Тот же пустой случай, что и в расписании, и та же дорога: класс выбирает сам
+   ученик, поэтому просьба «обратитесь к администрации» здесь была бы тупиком. #}
+<section class="glass">
+    <h2>Класс не указан</h2>
+    <p class="hint">Пока класс не выбран, показать нечего: по классу школа ведёт
+        расписание, домашнее задание и список учеников. Выберите его в
+        <a href="/me/settings">настройках</a> — рядом с псевдонимом и аватаркой.</p>
+</section>
+{% else %}
+
+{# Состав класса -- первая панель: раздел называется по людям, и начинается он
+   с них же. Виден только псевдоним и картинка, как и везде; пустой ветки нет
+   и быть не может -- сам ученик в этом классе уже есть, и себя он в списке
+   видит (список, из которого себя вычеркнули, читается как «а я где»). #}
+<section class="glass">
+    <div class="hero-head">{{ ui.icon('groups') }}<h2>Состав класса</h2></div>
+    <ul class="roster">
+        {% for mate in classmates %}
+        <li class="roster-item">
+            {{ ui.avatar(mate.alias, 'sm', mate.avatar_key) }}
+            <span class="roster-name">{{ mate.alias }}</span>
+            {% if mate.id == student.id %}<span class="muted">это вы</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+
+{# День и домашка -- те же панели, что и в расписании: сводка нужна здесь, а
+   второй копии разметки быть не должно. #}
+{% include "_school_today.html" %}
+
+{% include "_homework_list.html" %}
+
+<p class="hint">Вся неделя целиком и заметки к урокам — в
+    <a href="/schedule">расписании</a>.</p>
+{% endif %}
+{% endblock %}

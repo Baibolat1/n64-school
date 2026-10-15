@@ -254,11 +254,17 @@ button.chip:active {
 /* A field is the one surface on the page that is *recessed* rather than raised:
    the shadow sits inside it and the hairline sits on the bottom edge, which is
    the light of the pane opposite. That inversion is what makes it read as a
-   well to type into instead of a button to press. */
+   well to type into instead of a button to press.
+
+   A select is a field like any other and is listed with them: it is the same
+   well, and a native control left unstyled would be the one bright rectangle on
+   a dark page. The list that opens is drawn by the system, which theme.css has
+   already told to render dark (color-scheme). */
 input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="number"],
+select,
 textarea {
     width: 100%;
     padding: var(--space-3) var(--space-4);
@@ -284,6 +290,7 @@ input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
+select:focus,
 textarea:focus {
     outline: none;
     border-color: rgba(10, 132, 255, .7);

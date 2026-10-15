@@ -46,6 +46,7 @@ from app.repositories import students as students_repo
 from app.services import aliases as aliases_service
 from app.services import assistant as assistant_service
 from app.services import avatars as avatars_service
+from app.services import classes as classes_service
 from app.services import feed as feed_service
 from app.services import likes as likes_service
 from app.services import team as team_service
@@ -300,6 +301,23 @@ def change_alias(
     if not result.ok:
         return _no(aliases_service.refusal_message(result))
     return _ok(alias=student.alias, message="Псевдоним сохранён")
+
+
+@router.post("/me/class")
+def change_class(
+    class_name: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Save the class the settings form had offered to choose from.
+
+    The answer carries the stored value, not the submitted one -- the two differ
+    only when the value was refused, and then the form is told why instead.
+    """
+    result = classes_service.set_class(db, student, class_name)
+    if not result.ok:
+        return _no(classes_service.refusal_message(result))
+    return _ok(class_name=result.class_name or "", message="Класс сохранён")
 
 
 @router.post("/team-applications")

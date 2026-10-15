@@ -79,6 +79,10 @@ def day_summary(db, class_name: str | None, *, now: datetime | None = None) -> d
     Живёт здесь, а не в роутере ленты: виджет показывает школьный день, и
     лента не должна знать ни про расписание, ни про таблицы домашки. Пустой
     класс -- это не ошибка, а обычный случай: виджет тогда молчит.
+
+    ``date`` -- день, о котором сводка: его спрашивает экран класса, чтобы
+    подсветить задание, сдавать которое уже сегодня. Часы в одном месте, а не
+    у каждого вызывающего.
     """
     # Импорт внутри функции: модуль читается лентой на каждом запросе, а база
     # нужна только этому вызову. Заодно не возникает цикла импортов
@@ -88,11 +92,18 @@ def day_summary(db, class_name: str | None, *, now: datetime | None = None) -> d
     current = now or datetime.now(timezone.utc)
     today = current.date()
     if not class_name:
-        return {"class_name": None, "lessons": [], "homework": [], "weekday": None}
+        return {
+            "class_name": None,
+            "date": today,
+            "lessons": [],
+            "homework": [],
+            "weekday": None,
+        }
 
     weekday = today_weekday(current)
     return {
         "class_name": class_name,
+        "date": today,
         "weekday": weekday,
         "lessons": (
             schedule_repo.list_for_day(db, class_name, weekday) if weekday else []

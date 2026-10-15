@@ -19,10 +19,12 @@ from app.models.student import Student
 from app.repositories import tournaments as tournaments_repo
 from app.services import aliases as aliases_service
 from app.services import avatars as avatars_service
+from app.services import classes as classes_service
 from app.services import esports as esports_service
 from app.services import invites as invites_service
 from app.services import login_throttle
 from app.services import registration
+from app.services import school as school_service
 from app.services import student_auth
 from app.services import team as team_service
 
@@ -198,6 +200,10 @@ def _render_me(request: Request, student: Student, db: Session) -> Response:
             # The settings sheet below is the same partial /me/settings renders,
             # so it needs the field's current value here too.
             "alias_value": student.alias,
+            "class_options": classes_service.available_classes(
+                db, current=student.class_name
+            ),
+            "class_value": student.class_name or "",
         },
     )
 
@@ -214,6 +220,7 @@ def me(
 def _render_settings(
     request: Request,
     student: Student,
+    db: Session,
     *,
     error: str | None = None,
     alias_value: str | None = None,
@@ -239,6 +246,12 @@ def _render_settings(
             "alias_value": (
                 alias_value if alias_value is not None else student.alias
             ),
+            # The class the student can choose from: the school's timetable,
+            # read here rather than spelled out in the template.
+            "class_options": classes_service.available_classes(
+                db, current=student.class_name
+            ),
+            "class_value": student.class_name or "",
         },
     )
 
@@ -247,8 +260,46 @@ def _render_settings(
 def settings_page(
     request: Request,
     student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
 ) -> Response:
-    return _render_settings(request, student)
+    return _render_settings(request, student, db)
+
+
+@router.get("/me/class", response_class=HTMLResponse)
+def my_class_page(
+    request: Request,
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Класс ученика: кто рядом, что сегодня и что задали.
+
+    Класс берётся из сессии и только оттуда: параметра с классом в адресе нет
+    нарочно -- иначе чужую сетку уроков и чужой список псевдонимов можно было
+    бы выпросить прямой ссылкой. Пустой класс -- не ошибка: страница говорит,
+    где его выбрать, и ни чьего чужого расписания не показывает.
+
+    Уроки и домашка -- та же сводка, что и виджет на главной
+    (``school_service.day_summary``): третий способ разложить школьный день не
+    нужен, а расхождению взяться неоткуда.
+    """
+    day = school_service.day_summary(db, student.class_name)
+    return templates.TemplateResponse(
+        request,
+        "my_class.html",
+        {
+            "student": student,
+            "classmates": (
+                classes_service.classmates(db, student.class_name)
+                if student.class_name
+                else []
+            ),
+            "today_weekday": day["weekday"],
+            "today_lessons": day["lessons"],
+            "today_date": day["date"],
+            "homework": day["homework"],
+            "day_labels": school_service.DAY_LABELS,
+        },
+    )
 
 
 @router.post("/me/alias", response_class=HTMLResponse)
@@ -268,6 +319,7 @@ def change_alias(
     return _render_settings(
         request,
         student,
+        db,
         error=_alias_error_message(result),
         alias_value=result.alias,
     )
@@ -284,7 +336,26 @@ def change_avatar(
     if result.ok:
         # Post/Redirect/Get: a reload will not resubmit the form.
         return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_settings(request, student, error=_avatar_error_message(result))
+    return _render_settings(
+        request, student, db, error=_avatar_error_message(result)
+    )
+
+
+@router.post("/me/class", response_class=HTMLResponse)
+def change_class(
+    request: Request,
+    class_name: Annotated[str, Form()] = "",
+    student: Student = Depends(require_not_banned),
+    db: Session = Depends(get_db),
+) -> Response:
+    result = classes_service.set_class(db, student, class_name)
+    if result.ok:
+        # Post/Redirect/Get: a reload will not resubmit the form, and the
+        # profile it lands on already shows the class that was just stored.
+        return RedirectResponse(url="/me", status_code=status.HTTP_303_SEE_OTHER)
+    return _render_settings(
+        request, student, db, error=classes_service.refusal_message(result)
+    )
 
 
 def _render_dev_apply(

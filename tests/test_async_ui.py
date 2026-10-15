@@ -20,7 +20,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Every handler app/static/app.js dispatches on. A page using a name that is not
 # in here collects no handler and silently falls back to a full submit.
-HANDLERS = {"like", "post", "comment", "assistant", "avatar", "alias", "team"}
+HANDLERS = {
+    "like",
+    "post",
+    "comment",
+    "assistant",
+    "avatar",
+    "alias",
+    "class",
+    "team",
+}
 
 
 def _forms(html: str) -> list[str]:
@@ -173,6 +182,36 @@ def test_the_profile_changes_without_reloading(student):
     assert {"avatar", "alias", "team"} <= kinds
     for form in _async_forms(html):
         _assert_async_form(form, _attr(form, "data-async"))
+
+
+def test_the_class_form_is_one_the_script_knows(student, session_factory):
+    # The form is drawn only when the school has a timetable to choose from, so
+    # the sweep below never sees it on a bare test database -- and a page naming
+    # a handler the script does not know is exactly the silent failure this file
+    # exists to catch.
+    from app.repositories import schedule as schedule_repo
+
+    with session_factory() as db:
+        schedule_repo.upsert_entry(
+            db,
+            class_name="9А",
+            day_of_week=1,
+            lesson_no=1,
+            subject="Математика",
+            room="каб. 24",
+            starts_at="08:30",
+            ends_at="09:15",
+        )
+        db.commit()
+
+    forms = [
+        form
+        for form in _async_forms(student.client.get("/me/settings").text)
+        if _attr(form, "data-async") == "class"
+    ]
+    assert len(forms) == 1
+    _assert_async_form(forms[0], "class")
+    assert _attr(forms[0], "data-api") == "/api/me/class"
 
 
 def test_every_handler_on_every_page_is_one_the_script_knows(student, session_factory):
