@@ -117,7 +117,10 @@ def _render_feed(
 ) -> Response:
     total = posts_repo.count_visible_posts(db)
     page, total_pages = page_window(page, total, PAGE_SIZE)
-    posts = posts_repo.list_visible_posts(
+    # Pinned posts come first on the first page and are skipped by the later
+    # ones; ``total`` still counts them, so the page numbers stay right (see
+    # app.repositories.posts.list_feed_page).
+    posts = posts_repo.list_feed_page(
         db, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
     )
     # The author's picture is always the current one, so it is fetched on every

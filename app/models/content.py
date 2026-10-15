@@ -36,6 +36,11 @@ class Post(Base):
     status: Mapped[str] = mapped_column(
         Text, nullable=False, default=CONTENT_STATUS_VISIBLE, index=True
     )
+    # Pinned to the top of the feed and marked with a badge. A property of the
+    # post itself rather than a join table: there is one pin per post, and it
+    # lives and dies with the row. Only the demo seeder sets it today -- there
+    # is no moderator switch for it yet (see app.repositories.posts).
+    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )

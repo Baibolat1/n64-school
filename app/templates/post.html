@@ -4,10 +4,15 @@
 {% block content %}
 <p class="back-link"><a href="/feed">← Назад в ленту</a></p>
 
-<article class="post-card">
+<article class="post-card{% if post.is_featured %} post-card--featured{% endif %}">
     <div class="post-meta">
         {{ ui.avatar(post.display_alias, 'sm', avatar_keys.get(post.author_id)) }}
         <span class="post-author">{{ post.display_alias }}</span>
+        {# The same badge as in the feed (see _post_card.html): a pinned post
+           is pinned wherever it is read, not only in the stream. #}
+        {% if post.is_featured %}
+        <span class="post-tag">{{ ui.icon('sparkles') }}<span>Важное</span></span>
+        {% endif %}
         <time datetime="{{ post.created_at.isoformat() }}">
             {{ post.created_at.strftime('%d.%m.%Y %H:%M') }} UTC
         </time>

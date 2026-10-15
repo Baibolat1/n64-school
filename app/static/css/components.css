@@ -503,6 +503,31 @@ body:not(.login-page) main > * + * {
     }
 }
 
+/* A pinned post stays a line of the stream: no second frame and no extra
+   padding, so nothing beside it moves. The mark is colour -- the accent wash
+   behind the card, which reaches its text edges exactly. */
+.posts .post-card--featured {
+    background: var(--accent-soft);
+}
+
+/* The badge of a pinned post, next to the author. A dark pill rather than an
+   accent one: it stands on the wash, and light-on-accent would be the one pair
+   in the theme whose contrast is not comfortable at this size. */
+.post-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-3);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    background: var(--surface-2);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+}
+
 .post-meta {
     display: flex;
     flex-wrap: wrap;
