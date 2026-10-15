@@ -5,13 +5,15 @@ regression in the shared login page cannot slip through.
 """
 
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.config import settings
 from app.main import app
 from app.models.admin import Admin
+from app.models.registration_qr import RegistrationQrToken
 from app.models.student import Student
 from app.services import invites as invites_service
 from app.services import qr_image
@@ -231,6 +233,90 @@ def test_refresh_retires_the_old_code(client, session_factory):
     with session_factory() as db:
         assert reg.effective_status(reg.get_qr_token(db, old)) == "expired"
         assert reg.effective_status(reg.get_qr_token(db, new)) == "pending"
+
+
+def test_the_qr_page_offers_the_same_code_as_a_link(client, session_factory):
+    # Жюри приходит с одним устройством: под QR-кодом должна быть та же самая
+    # регистрация ссылкой, чтобы её открыть во втором (приватном) окне и
+    # подтвердить там, уже войдя учеником.
+    post_with_csrf(client, "/register/qr", "/register/qr", {"email": EMAIL})
+    raw_token = reg.load_qr_cookie(client.cookies.get(settings.QR_COOKIE_NAME))
+
+    page = client.get("/register/qr")
+    payload = qr_image.encode_payload(raw_token)
+    link = "/scan?payload=" + quote(payload, safe="")
+    assert link in page.text, "под QR-кодом есть та же регистрация ссылкой"
+
+    # Ссылка не декоративная: страница сканера получает код и подтверждает его.
+    scanner = _logged_in_client(session_factory, "Сканер-06")
+    opened = scanner.get("/scan", params={"payload": payload})
+    assert opened.status_code == 200
+    assert payload in opened.text
+    assert "Запрашиваем доступ к камере" not in opened.text
+    scan = post_with_csrf(scanner, "/scan/confirm", "/scan", {"payload": payload})
+    assert scan.json()["ok"] is True
+    assert client.get("/register/qr/status").json()["status"] == "confirmed"
+
+
+def test_a_student_confirms_only_a_few_novices(session_factory, monkeypatch):
+    # Подтверждение -- это приглашение: один ученик не должен в одиночку
+    # наполнять закрытый сайт. Потолок считается по подтверждениям за сутки.
+    monkeypatch.setattr(settings, "QR_INVITES_PER_STUDENT", 2)
+
+    with session_factory() as db:
+        scanner = Student(alias="Сканер-04")
+        db.add(scanner)
+        db.commit()
+
+        for index in range(2):
+            raw_token = reg.start_qr_registration(db, f"n{index}@x.io").raw_token
+            assert reg.confirm_qr_token(db, raw_token, scanner) is None
+
+        extra = reg.start_qr_registration(db, "late@x.io").raw_token
+        assert (
+            reg.confirm_qr_token(db, extra, scanner)
+            is reg.RegistrationError.INVITE_LIMIT
+        )
+
+        # Вчерашние подтверждения в окно не входят: окно скользящее.
+        yesterday = datetime.now(timezone.utc) - timedelta(
+            hours=settings.QR_INVITE_WINDOW_HOURS + 1
+        )
+        db.execute(
+            update(RegistrationQrToken)
+            .where(RegistrationQrToken.confirmed_by == scanner.id)
+            .values(confirmed_at=yesterday)
+        )
+        db.commit()
+        assert reg.confirm_qr_token(db, extra, scanner) is None
+
+
+def test_the_qr_path_stops_at_the_account_ceiling(session_factory, monkeypatch):
+    # Общий потолок аккаунтов, созданных через QR: это единственный вход после
+    # закрытия почтовой регистрации, значит и потолок самого сайта.
+    monkeypatch.setattr(settings, "QR_ACCOUNT_LIMIT", 1)
+
+    with session_factory() as db:
+        scanner = Student(alias="Сканер-05")
+        db.add(scanner)
+        db.commit()
+
+        # Двое новичков начали одновременно, пока место было.
+        first = reg.start_qr_registration(db, "one@x.io").raw_token
+        second = reg.start_qr_registration(db, "two@x.io").raw_token
+        assert reg.confirm_qr_token(db, first, scanner) is None
+        assert reg.confirm_qr_token(db, second, scanner) is None
+
+        assert reg.complete_qr_registration(db, first, PASSWORD).ok
+        # Второй код подтверждён, но место занято -- и это не ошибка ввода.
+        late = reg.complete_qr_registration(db, second, PASSWORD)
+        assert late.ok is False
+        assert late.reason is reg.RegistrationError.QR_LIMIT
+
+        # И новый код уже не выдаётся: обещать нечего.
+        closed = reg.start_qr_registration(db, "three@x.io")
+        assert closed.ok is False
+        assert closed.reason is reg.RegistrationError.QR_LIMIT
 
 
 def test_scan_rejects_a_foreign_qr(client, session_factory):

@@ -4,17 +4,30 @@
 {% block content %}
 <section class="card">
 <h1>{{ ui.icon('qr') }} Сканер QR</h1>
+{# Код может прийти и ссылкой (страница новичка даёт её рядом с QR): тогда
+   камера не нужна вовсе, а подтверждение делает тот, кто уже вошёл, -- один
+   телефон вместо двух. Значение ссылки кладётся в поле, содержимое страницы
+   его не пересказывает: подтверждает всё равно сервер. #}
+<input type="hidden" id="scan-payload" value="{{ payload }}">
+
+{% if payload %}
+<p>Код пришёл ссылкой — камера не нужна. Подтвердите регистрацию, которую
+    начал новичок.</p>
+{% else %}
 <p>Наведите камеру на QR-код новичка, чтобы подтвердить его регистрацию.</p>
+{% endif %}
 
 <div id="scan-frame">
     <video id="scan-video" playsinline muted></video>
 </div>
 <canvas id="scan-canvas" hidden></canvas>
 <form hidden><input type="hidden" id="scan-csrf" name="csrf_token" value="{{ csrf_token }}"></form>
-<p id="scan-status" class="hint">Запрашиваем доступ к камере…</p>
+<p id="scan-status" class="hint">{% if payload %}Подтверждаем код…{% else %}Запрашиваем доступ к камере…{% endif %}</p>
 
+{% if not payload %}
 <p class="hint">Нет доступа к камере? Попросите новичка показать код и
     откройте эту страницу на устройстве с камерой.</p>
+{% endif %}
 
 <script src="/static/vendor/jsqr.min.js"></script>
 <script src="/static/scan.js"></script>

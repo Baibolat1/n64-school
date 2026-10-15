@@ -12,6 +12,18 @@
 <img id="qr-image" class="qr-image" src="/register/qr/image.png"
      alt="QR-код для подтверждения" width="240" height="240">
 <p class="hint" id="qr-poll-hint">Ожидаем подтверждения…</p>
+
+{# Тот же код ссылкой: камеры под рукой может не быть, а телефон с камерой --
+   только один. Ссылку открывает ученик-подтверждающий в приватном окне, уже
+   войдя там под собой. #}
+<div class="qr-manual">
+    <p class="hint">Нет камеры? Ссылка делает то же самое: откройте её в
+        приватном окне под учеником, который подтверждает регистрацию.</p>
+    <a class="qr-manual-url" id="qr-manual-url" href="{{ scan_url }}">{{ scan_url }}</a>
+    <button type="button" class="link-button" id="qr-copy"
+            data-copy-target="qr-manual-url">Скопировать ссылку</button>
+    <p class="hint" id="qr-copy-status" role="status"></p>
+</div>
 <form method="post" action="/register/qr/refresh">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit" class="link-button">Обновить код</button>

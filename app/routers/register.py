@@ -6,6 +6,7 @@ goes through the router-level CSRF dependency.
 """
 
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -34,13 +35,46 @@ GENERIC_ERROR = "Не удалось зарегистрироваться. Пр�
 TAKEN_ERROR = "Этот email уже зарегистрирован."
 INVALID_EMAIL_ERROR = "Введите корректный email."
 
+# Refusals of the QR path (see app.services.registration): both are states of
+# the site, not mistakes of the visitor, so neither is worded as an error.
+QR_LIMIT_ERROR = (
+    "Сайт набран: регистрация через QR-код закрыта. Попросите "
+    "администрацию школы выдать пригласительный код."
+)
+INVITE_LIMIT_ERROR = (
+    "Вы подтвердили уже достаточно новичков. Следующий можно будет "
+    f"подтвердить через {settings.QR_INVITE_WINDOW_HOURS} ч."
+)
+
 # The QR token cookie outlives the token itself so an expired page can still
 # offer "Обновить код" (see registration.load_qr_cookie).
 _QR_COOKIE_MAX_AGE = (settings.QR_TOKEN_TTL_HOURS + 24) * 3600
 
 
-def _qr_page_context(status_value: str, *, error: str | None = None) -> dict:
-    return {"status": status_value, "error": error}
+def _qr_page_context(status_value: str, scan_url: str, *, error: str | None = None) -> dict:
+    return {"status": status_value, "error": error, "scan_url": scan_url}
+
+
+def _scan_url(request: Request, raw_token: str) -> str:
+    """The same code as a link, instead of an image, for the one-device jury.
+
+    The link lands on ``/scan``, the page an *existing* student confirms from,
+    so it is opened in a second (private) window by the student who does the
+    confirming while the novice stays in the first one. The payload goes in the
+    query string exactly as the QR image carries it.
+
+    Absolute on purpose: it is meant to be copied out of the page and pasted
+    into another window, and a relative path pasted into the address bar is not
+    a URL the browser would resolve. The scheme is forced to https wherever the
+    deployment says the cookies are Secure -- the platform terminates TLS before
+    the app, so the request itself looks like plain http, and a copied http link
+    would open a window the session cookie cannot follow.
+    """
+    base_url = str(request.base_url).rstrip("/")
+    if settings.COOKIE_SECURE and base_url.startswith("http://"):
+        base_url = "https://" + base_url[len("http://") :]
+    payload = quote(qr_image.encode_payload(raw_token), safe="")
+    return f"{base_url}/scan?payload={payload}"
 
 
 def _set_qr_cookie(response: Response, raw_token: str) -> None:
@@ -180,7 +214,7 @@ def qr_page(
     return templates.TemplateResponse(
         request,
         "register_qr.html",
-        _qr_page_context(status_value),
+        _qr_page_context(status_value, _scan_url(request, raw_token)),
     )
 
 
@@ -206,6 +240,7 @@ def qr_start(
         message = {
             registration_service.RegistrationError.EMAIL_TAKEN: TAKEN_ERROR,
             registration_service.RegistrationError.INVALID_EMAIL: INVALID_EMAIL_ERROR,
+            registration_service.RegistrationError.QR_LIMIT: QR_LIMIT_ERROR,
         }.get(result.reason, GENERIC_ERROR)
         return templates.TemplateResponse(
             request,
@@ -303,6 +338,7 @@ def qr_password(
                 f"{settings.MAX_PASSWORD_LENGTH} символов"
             ),
             registration_service.RegistrationError.EMAIL_TAKEN: TAKEN_ERROR,
+            registration_service.RegistrationError.QR_LIMIT: QR_LIMIT_ERROR,
         }.get(result.reason, GENERIC_ERROR)
         token = registration_service.get_qr_token(db, raw_token)
         status_value = (
@@ -311,7 +347,12 @@ def qr_password(
         return templates.TemplateResponse(
             request,
             "register_qr.html",
-            _qr_page_context(status_value, error=message),
+            # Ссылка нужна только ветке «ждём подтверждения», но собирается
+            # всегда: страницу рендерит один шаблон, и решать здесь, какая из
+            # его ветвей покажется, не за чем.
+            _qr_page_context(
+                status_value, _scan_url(request, raw_token), error=message
+            ),
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -329,11 +370,23 @@ def qr_password(
 @router.get("/scan", response_class=HTMLResponse)
 def scan_page(
     request: Request,
+    payload: str = "",
     student: Student = Depends(require_not_banned),
 ) -> Response:
+    """The scanner, or the same confirmation without a camera.
+
+    ``payload`` arrives filled in when the page was opened from the link the
+    novice's page shows next to the QR image -- the one-device case: the
+    confirming student works in this window while the novice stays in the other.
+    It is only handed to the template (and posted from there by ``scan.js`` to
+    ``/scan/confirm``, which validates it); the page itself reads nothing out of
+    it and shows nothing back.
+    """
     # ``student`` drives the navigation partials in base.html; without it the
     # scanner page renders with no way off it.
-    return templates.TemplateResponse(request, "scan.html", {"student": student})
+    return templates.TemplateResponse(
+        request, "scan.html", {"student": student, "payload": payload}
+    )
 
 
 @router.post("/scan/confirm")
@@ -354,6 +407,8 @@ def scan_confirm(
         message = {
             registration_service.RegistrationError.TOKEN_EXPIRED: "Код истёк",
             registration_service.RegistrationError.INVALID_TOKEN: "Код не найден",
+            registration_service.RegistrationError.INVITE_LIMIT: INVITE_LIMIT_ERROR,
+            registration_service.RegistrationError.QR_LIMIT: QR_LIMIT_ERROR,
         }.get(reason, "Код недействителен")
         return JSONResponse(
             {"ok": False, "error": message}, status_code=status.HTTP_400_BAD_REQUEST

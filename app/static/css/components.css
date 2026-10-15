@@ -1637,6 +1637,30 @@ body:not(.login-page) main > * + * {
     object-fit: cover;
 }
 
+/* The same code as a link, next to the QR image: for one device and two
+   windows (see register_qr.html). #qr-manual-url is read by register_qr.js, so
+   the id stays whatever happens to the class. */
+.qr-manual {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--surface-2);
+    border: 1px solid var(--control-line);
+    border-radius: var(--radius-m);
+}
+
+.qr-manual .hint {
+    margin-top: 0;
+}
+
+.qr-manual-url {
+    display: block;
+    margin: var(--space-2) 0;
+    /* A registration link is long and has nowhere natural to break; without
+       this it would set the width of the whole card on a phone. */
+    overflow-wrap: anywhere;
+    font-size: var(--step--1);
+}
+
 /* Moderation dashboard: one counter per queue, each a link into its queue. -- */
 
 .stat-grid {

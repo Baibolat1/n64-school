@@ -198,3 +198,23 @@ def test_a_flood_is_stopped_by_the_rate_limit(student, monkeypatch):
     assert refused.status_code == 429
     assert int(refused.headers["Retry-After"]) > 0
 
+
+def test_the_day_budget_stops_the_whole_site(student, monkeypatch):
+    # Кроме личного окна есть суточный потолок на школу: вопрос, дошедший до
+    # модели, стоит денег, и по одному ученику этого не видно. Отказ -- фраза,
+    # которую человек понимает, а не «ошибка сервера».
+    monkeypatch.setattr(settings, "RATE_LIMIT_ASSISTANT", 10)
+    monkeypatch.setattr(settings, "ASSISTANT_DAILY_LIMIT", 2)
+
+    for _ in range(2):
+        assert (
+            student.post("/assistant", "/assistant", {"question": "расписание"})
+            .status_code
+            == 200
+        )
+
+    refused = student.post("/assistant", "/assistant", {"question": "расписание"})
+    assert refused.status_code == 429
+    assert "На сегодня вопросы" in refused.text
+    assert int(refused.headers["Retry-After"]) > 0
+

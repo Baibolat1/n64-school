@@ -12,6 +12,8 @@
     const canvas = document.getElementById("scan-canvas");
     const status = document.getElementById("scan-status");
     const csrfField = document.getElementById("scan-csrf");
+    const payloadField = document.getElementById("scan-payload");
+    const frame = document.getElementById("scan-frame");
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
     let scanning = false;
@@ -22,7 +24,7 @@
         status.className = kind === "error" ? "error" : "hint";
     }
 
-    async function submit(payload) {
+    async function submit(payload, resume) {
         scanning = false;
         setStatus("Код найден, подтверждаем…", "hint");
         const body = new URLSearchParams();
@@ -36,12 +38,21 @@
             });
             const data = await response.json();
             if (data.ok) {
-                setStatus("Готово! Регистрация подтверждена.", "hint");
+                setStatus(
+                    resume
+                        ? "Готово! Регистрация подтверждена."
+                        : "Готово! Вернитесь в окно с QR-кодом: там появится " +
+                          "форма пароля.",
+                    "hint"
+                );
             } else {
                 setStatus(data.error || "Не удалось подтвердить код.", "error");
             }
         } catch (e) {
             setStatus("Сеть недоступна. Попробуйте ещё раз.", "error");
+        }
+        if (!resume) {
+            return;
         }
         // Resume scanning so the next novice can be confirmed without a reload.
         setTimeout(function () {
@@ -63,7 +74,7 @@
                 inversionAttempts: "dontInvert",
             });
             if (code && code.data) {
-                submit(code.data);
+                submit(code.data, true);
                 return;
             }
         }
@@ -88,6 +99,20 @@
         scanning = true;
         setStatus("Наведите камеру на QR-код новичка.", "hint");
         requestAnimationFrame(tick);
+    }
+
+    // The code came in as a link (a novice's page hands out that link beside
+    // the QR): there is nothing to scan and no reason to ask for the camera --
+    // one device, two windows. The payload is checked by the server, not here.
+    const prefilled = payloadField ? payloadField.value.trim() : "";
+    if (prefilled) {
+        // The camera block would otherwise sit there dead with its "asking for
+        // camera" hint, promising something this page will not do.
+        if (frame) {
+            frame.hidden = true;
+        }
+        submit(prefilled, false);
+        return;
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {

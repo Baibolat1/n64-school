@@ -6,7 +6,9 @@
 
 Запись здесь одна -- вопрос ассистенту. Он тратит бюджет частоты (см.
 ``RATE_LIMIT_ASSISTANT``): ответ из базы бесплатен, но и он считается, чтобы
-счётчик оставался одним и понятным.
+счётчик оставался одним и понятным. Кроме личного окна есть суточный потолок на
+весь сайт (``ASSISTANT_DAILY_LIMIT``): вопросы, которые доходят до модели,
+стоят денег, и по одному ученику этого не видно.
 """
 
 from datetime import datetime, timezone
@@ -30,6 +32,11 @@ from app.services import school as school_service
 from app.services.rate_limit import limiter
 
 router = APIRouter(tags=["school"], dependencies=[Depends(require_csrf)])
+
+# Сутки для суточного потолка ассистента. Окно скользящее (как и у остальных
+# лимитов), поэтому «сутки» -- это последние 24 часа, а не календарный день:
+# считать по календарю значило бы держать в счётчике ещё и часовой пояс.
+_DAY_SECONDS = 24 * 60 * 60
 
 
 def _today() -> datetime:
@@ -163,6 +170,30 @@ def ask_assistant(
         return templates.TemplateResponse(
             request, "assistant.html", page, status_code=status.HTTP_200_OK
         )
+
+    # Суточный потолок сайта проверяется первым: вопрос, которому отказал общий
+    # бюджет, не должен ещё и тратить личный.
+    day_limit = limiter.check(
+        "assistant:day",
+        limit=settings.ASSISTANT_DAILY_LIMIT,
+        window_seconds=_DAY_SECONDS,
+    )
+    if not day_limit.allowed:
+        # Не «ошибка сервера», а понятная фраза: ученику нечего исправлять, ему
+        # надо подождать -- и он об этом узнаёт.
+        page["error"] = (
+            "На сегодня вопросы к помощнику закончились: общий бюджет школы "
+            "на сутки исчерпан. Загляните завтра — расписание, уроки и "
+            "киберспорт работают как обычно."
+        )
+        response = templates.TemplateResponse(
+            request,
+            "assistant.html",
+            page,
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+        response.headers["Retry-After"] = str(day_limit.retry_after)
+        return response
 
     limit = limiter.check(
         f"assistant:{student.id}",

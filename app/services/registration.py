@@ -12,6 +12,19 @@ invites do), while the plaintext is what the QR image encodes. The novice's own
 browser carries the plaintext token in a short-lived signed cookie so the page
 can re-render, refresh and poll without any server-side session.
 
+Two caps guard the QR path, because it stays open when open registration has
+already closed and is therefore the way in:
+
+* ``QR_INVITES_PER_STUDENT`` confirmations per student per
+  ``QR_INVITE_WINDOW_HOURS`` -- confirming *is* an invitation, and one student
+  handing out the site without a limit is how a closed school stops being one;
+* ``QR_ACCOUNT_LIMIT`` accounts ever created through QR -- the hard ceiling on
+  the size of the site, counted as spent tokens (see ``_qr_accounts_created``).
+
+Both are enforced by the same kind of guarded statement as
+``OPEN_REGISTRATION_LIMIT``: the count is re-read inside the statement that
+spends the budget, so two requests at the boundary cannot both get in.
+
 Transaction policy (mirrors the other services): this layer owns commits for
 write operations.
 """
@@ -94,6 +107,10 @@ class RegistrationError(str, Enum):
     INVALID_TOKEN = "invalid_token"
     TOKEN_EXPIRED = "token_expired"
     NOT_CONFIRMED = "not_confirmed"
+    # The confirming student has invited as many novices as one student may.
+    INVITE_LIMIT = "invite_limit"
+    # The QR path has created as many accounts as the site allows at all.
+    QR_LIMIT = "qr_limit"
 
 
 @dataclass(frozen=True)
@@ -231,26 +248,40 @@ def _insert_open_student(
     ).scalar_one_or_none()
 
 
-def _create_student(
+def _create_qr_student(
     db: Session, *, email: str, password: str
 ) -> Student | None:
-    """Insert a student with credentials; ``None`` if the email was just taken.
+    """Insert the student of a confirmed QR token; ``None`` if it could not be.
 
-    Unconditional (no open-registration cap): used by the QR path, which is the
-    way in *after* the limit has been reached.
+    No ``OPEN_REGISTRATION_LIMIT`` here -- the QR path is the way in *after*
+    that limit is reached -- but ``QR_ACCOUNT_LIMIT`` does apply, and it is
+    checked in the same guarded-insert way as the open cap: the count of spent
+    tokens is re-read inside the statement, so two novices finishing at the
+    ceiling cannot both get an account. ``None`` can also mean the email was
+    taken a moment ago; the caller tells the two apart.
     """
-    student = Student(
-        alias=aliases_service.generate_alias(db),
-        email=email,
-        password_hash=hash_password(password),
+    alias = aliases_service.generate_alias(db)
+    password_hash = hash_password(password)
+    stmt = insert(Student).from_select(
+        ["alias", "email", "password_hash", "is_banned", "alias_strategy"],
+        select(
+            literal(alias),
+            literal(email),
+            literal(password_hash),
+            literal(False),
+            literal("constant"),
+        ).where(_qr_accounts_sql() < settings.QR_ACCOUNT_LIMIT),
     )
-    db.add(student)
     try:
+        result = db.execute(stmt)
         db.commit()
     except IntegrityError:
         db.rollback()
         return None
-    return student
+    if result.rowcount != 1:
+        db.rollback()
+        return None
+    return db.execute(select(Student).where(Student.email == email)).scalar_one_or_none()
 
 
 # --- QR registration ----------------------------------------------------------
@@ -269,6 +300,10 @@ def start_qr_registration(db: Session, raw_email: str) -> QrStartResult:
         return QrStartResult(ok=False, reason=RegistrationError.INVALID_EMAIL)
     if _email_taken(db, email):
         return QrStartResult(ok=False, reason=RegistrationError.EMAIL_TAKEN)
+    if _qr_accounts(db) >= settings.QR_ACCOUNT_LIMIT:
+        # Сайт набран: код был бы обещанием, которое нечем сдержать. Отказ
+        # здесь, а не после ожидания подтверждения.
+        return QrStartResult(ok=False, reason=RegistrationError.QR_LIMIT)
 
     return QrStartResult(ok=True, raw_token=_new_qr_token(db, email))
 
@@ -282,6 +317,8 @@ def refresh_qr_registration(db: Session, raw_token: str) -> QrStartResult:
         return QrStartResult(ok=False, reason=RegistrationError.INVALID_TOKEN)
     if _email_taken(db, token.email):
         return QrStartResult(ok=False, reason=RegistrationError.EMAIL_TAKEN)
+    if _qr_accounts(db) >= settings.QR_ACCOUNT_LIMIT:
+        return QrStartResult(ok=False, reason=RegistrationError.QR_LIMIT)
     # Retire the old code so only the newest one is live.
     _expire_token(db, token)
     return QrStartResult(ok=True, raw_token=_new_qr_token(db, token.email))
@@ -319,6 +356,53 @@ def get_qr_token(db: Session, raw_token: str) -> RegistrationQrToken | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
+def _invites_sql(student_id: int, *, since: datetime):
+    """SQL counting the novices ``student_id`` confirmed since ``since``.
+
+    Handed back as SQL rather than as a number because the same expression is
+    needed twice: read on its own for the readable refusal, and inside the
+    UPDATE that claims the token, where the count has to be re-read by the very
+    statement that spends it.
+    """
+    return (
+        select(func.count())
+        .select_from(RegistrationQrToken)
+        .where(
+            RegistrationQrToken.confirmed_by == student_id,
+            RegistrationQrToken.confirmed_at > since,
+        )
+        .scalar_subquery()
+    )
+
+
+def _invites_used(db: Session, student_id: int) -> int:
+    """How many novices ``student_id`` has confirmed inside the invite window."""
+    since = _utcnow() - timedelta(hours=settings.QR_INVITE_WINDOW_HOURS)
+    return db.execute(select(_invites_sql(student_id, since=since))).scalar_one()
+
+
+def _qr_accounts_sql():
+    """SQL counting the accounts the QR path has created -- one per spent token.
+
+    A token becomes ``used`` only after the student row exists
+    (:func:`complete_qr_registration`), so spent tokens *are* the record of the
+    accounts created by QR, and they are what ``QR_ACCOUNT_LIMIT`` counts. Which
+    is also why :func:`purge_expired_tokens` leaves them alone: deleting a spent
+    token would quietly reopen a seat at the ceiling.
+    """
+    return (
+        select(func.count())
+        .select_from(RegistrationQrToken)
+        .where(RegistrationQrToken.status == QR_STATUS_USED)
+        .scalar_subquery()
+    )
+
+
+def _qr_accounts(db: Session) -> int:
+    """How many accounts the QR path has created so far."""
+    return db.execute(select(_qr_accounts_sql())).scalar_one()
+
+
 def effective_status(token: RegistrationQrToken) -> str:
     """The token's status, treating a passed ``expires_at`` as expired.
 
@@ -337,7 +421,10 @@ def confirm_qr_token(
 
     Returns ``None`` on success, else the reason. A conditional UPDATE claims the
     token atomically, so two students scanning at once cannot both win and an
-    expired/used token cannot be resurrected.
+    expired/used token cannot be resurrected. The same statement re-reads both
+    caps on the QR path -- this student's invites and the site's remaining seats
+    (``QR_INVITES_PER_STUDENT``, ``QR_ACCOUNT_LIMIT``) -- so a request that
+    started just before the budget ran out cannot slip past it.
     """
     token = get_qr_token(db, raw_token)
     if token is None or token.status != QR_STATUS_PENDING:
@@ -352,6 +439,12 @@ def confirm_qr_token(
             RegistrationQrToken.id == token.id,
             RegistrationQrToken.status == QR_STATUS_PENDING,
             RegistrationQrToken.expires_at > now,
+            _invites_sql(
+                confirming_student.id,
+                since=now - timedelta(hours=settings.QR_INVITE_WINDOW_HOURS),
+            )
+            < settings.QR_INVITES_PER_STUDENT,
+            _qr_accounts_sql() < settings.QR_ACCOUNT_LIMIT,
         )
         .values(
             status=QR_STATUS_CONFIRMED,
@@ -366,9 +459,23 @@ def confirm_qr_token(
     )
     if result.rowcount != 1:
         db.rollback()
-        return RegistrationError.INVALID_TOKEN
+        return _confirm_refusal(db, confirming_student.id)
     db.commit()
     return None
+
+
+def _confirm_refusal(db: Session, student_id: int) -> RegistrationError:
+    """Why the claim failed, told apart from "the code was taken meanwhile".
+
+    The token itself was checked before the UPDATE, so what is left is one of
+    the two caps or a race with another scanner; the caps are named, the race is
+    reported as an unusable code, which is what the caller can act on.
+    """
+    if _invites_used(db, student_id) >= settings.QR_INVITES_PER_STUDENT:
+        return RegistrationError.INVITE_LIMIT
+    if _qr_accounts(db) >= settings.QR_ACCOUNT_LIMIT:
+        return RegistrationError.QR_LIMIT
+    return RegistrationError.INVALID_TOKEN
 
 
 def complete_qr_registration(
@@ -396,9 +503,14 @@ def complete_qr_registration(
 
     # Create the student first: only once the account exists is the token spent,
     # so a failed insert does not burn a confirmed code.
-    student = _create_student(db, email=token.email, password=password)
+    student = _create_qr_student(db, email=token.email, password=password)
     if student is None:
-        return RegistrationResult(ok=False, reason=RegistrationError.EMAIL_TAKEN)
+        reason = (
+            RegistrationError.QR_LIMIT
+            if _qr_accounts(db) >= settings.QR_ACCOUNT_LIMIT
+            else RegistrationError.EMAIL_TAKEN
+        )
+        return RegistrationResult(ok=False, reason=reason)
     db.execute(
         update(RegistrationQrToken)
         .where(RegistrationQrToken.id == token.id)
@@ -409,11 +521,18 @@ def complete_qr_registration(
 
 
 def purge_expired_tokens(db: Session, older_than_hours: int = 48) -> None:
-    """Delete long-expired tokens (housekeeping helper; safe to call anytime)."""
+    """Delete long-expired tokens (housekeeping helper; safe to call anytime).
+
+    Spent tokens stay: they are the record of the accounts QR has created, and
+    that record is what ``QR_ACCOUNT_LIMIT`` counts (see ``_qr_accounts_sql``).
+    """
     cutoff = _utcnow() - timedelta(hours=older_than_hours)
     db.execute(
         delete(RegistrationQrToken)
-        .where(RegistrationQrToken.expires_at < cutoff)
+        .where(
+            RegistrationQrToken.expires_at < cutoff,
+            RegistrationQrToken.status != QR_STATUS_USED,
+        )
         .execution_options(synchronize_session=False)
     )
     db.commit()
