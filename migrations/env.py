@@ -15,8 +15,11 @@ from app import models  # noqa: F401
 # access to the values within the .ini file in use.
 config = context.config
 
-# Database URL comes from application settings, not from alembic.ini.
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Database URL comes from application settings, not from alembic.ini. The
+# ``database_url`` property resolves DATABASE_PATH against the project root, so
+# ``alembic upgrade head`` reaches the same file the application opens no matter
+# which directory it is run from.
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

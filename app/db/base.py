@@ -5,13 +5,16 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
 
+# ``database_url`` resolves DATABASE_PATH against the project root, so the same
+# file is used whatever directory the process was started from (see
+# app.config.Settings.database_url).
 connect_args = (
     {"check_same_thread": False}
-    if settings.DATABASE_URL.startswith("sqlite")
+    if settings.database_url.startswith("sqlite")
     else {}
 )
 
-engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+engine = create_engine(settings.database_url, connect_args=connect_args)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

@@ -1,13 +1,27 @@
-fastapi~=0.115
-uvicorn[standard]~=0.32
-pydantic-settings~=2.6
-sqlalchemy~=2.0
-alembic~=1.13
-jinja2~=3.1
-python-multipart~=0.0.12
-argon2-cffi~=23.1
-itsdangerous~=2.2
-qrcode~=8.0
-pillow~=11.0
-pytest~=8.3
-httpx~=0.27
+# Runtime dependencies, pinned to the versions the project is tested on
+# (Python 3.14, see .python-version). Nothing here is needed only by the tests:
+# those live in requirements-dev.txt, and the Render build installs this file
+# alone.
+#
+# Versions are exact (==), not ranges: the site is deployed from this file, and
+# a deploy that silently picks up a new minor of Jinja2 or SQLAlchemy is a
+# deploy nobody tested.
+
+fastapi==0.143.0
+# [standard] brings uvloop, httptools, websockets and watchfiles -- the fast
+# event loop and HTTP parser on Linux, which is what production runs on.
+uvicorn[standard]==0.54.0
+pydantic-settings==2.15.0
+SQLAlchemy==2.1.4
+alembic==1.20.0
+Jinja2==3.1.6
+# Parses multipart/form bodies: every form on the site is one.
+python-multipart==0.0.32
+argon2-cffi==23.1.0
+itsdangerous==2.2.0
+qrcode==8.2
+# Pillow is qrcode's rendering backend for the PNG a QR code is served as.
+pillow==11.3.0
+# Used by the assistant for its raw model calls (app.services.assistant) and by
+# the tests' HTTP client.
+httpx==0.28.1

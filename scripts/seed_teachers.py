@@ -44,7 +44,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.config import settings  # noqa: E402
+from app.config import _absolute, settings  # noqa: E402
 from app.db.base import SessionLocal  # noqa: E402
 from app.repositories import criteria as criteria_repo  # noqa: E402
 from app.repositories import teachers as teachers_repo  # noqa: E402
@@ -224,7 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    path = Path(args.file) if args.file else Path(settings.TEACHERS_DATA_FILE)
+    # The configured path is resolved against the project root, not the current
+    # directory: the script is also run from a service whose cwd is not the repo
+    # (see app.config._absolute). An explicit --file is taken as given.
+    path = Path(args.file) if args.file else Path(_absolute(settings.TEACHERS_DATA_FILE))
     if not path.exists() and args.file is None:
         print(
             f"Файл {path} не найден — беру демо-данные {DEMO_FILE.name} "

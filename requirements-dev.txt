@@ -1,0 +1,11 @@
+# Everything needed to work on the project, tests included.
+#
+# The Render build installs requirements.txt only -- pytest has no business in
+# an image that serves the site. Locally:
+#
+#     .venv/bin/pip install -r requirements-dev.txt
+#     .venv/bin/python -m pytest
+
+-r requirements.txt
+
+pytest==8.4.2

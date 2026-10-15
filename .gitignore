@@ -1,7 +1,21 @@
 .venv/
 __pycache__/
-*.db
-.env
+*.py[cod]
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# базы данных: и школьная, и файлы, которые заводит прогон стенда
+*.db
+*.db-journal
+*.db-wal
+*.sqlite3
+
+# журналы и вывод локальных прогонов
+*.log
+
+.env
+.DS_Store
+
 # настоящие ФИО учителей и критерии — вне репозитория
 data/*.local.*
