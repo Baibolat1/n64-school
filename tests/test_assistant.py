@@ -21,6 +21,19 @@ from app.services import school as school_service
 TODAY = date(2026, 10, 13)  # a Tuesday, so "today" and "tomorrow" differ
 
 
+class _FakeResponse:
+    """Ответ модели без сети: телу важен только ``json()`` и статус."""
+
+    def __init__(self, payload: dict):
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self._payload
+
+
 @pytest.fixture()
 def class_data(session_factory):
     """«9А» with lessons today, one tomorrow, homework and a note."""
@@ -144,6 +157,63 @@ def test_a_failing_model_is_a_polite_answer_not_a_crash(
     answer = _ask(session_factory, class_data, "расскажи анекдот")
     assert answer.source == assistant.SOURCE_HELP
     assert "Модель" in answer.text
+
+
+def test_the_model_and_the_address_come_from_the_settings(monkeypatch):
+    # Адрес и идентификатор модели -- настройки, а не константы: на стенде
+    # провайдера меняют переменными окружения, без пересборки образа. Заодно
+    # проверяем, что путь к методу дописывается к корню API, а не зашит в него.
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    monkeypatch.setattr(settings, "DEEPSEEK_API_KEY", "ключ")
+    monkeypatch.setattr(settings, "DEEPSEEK_BASE_URL", "https://gateway.local/v1/")
+    monkeypatch.setattr(settings, "DEEPSEEK_MODEL", "своя-модель")
+
+    sent = {}
+
+    def fake_post(url, **kwargs):
+        sent["url"] = url
+        sent["kwargs"] = kwargs
+        return _FakeResponse(
+            {"choices": [{"message": {"content": "Ответ модели"}}]}
+        )
+
+    monkeypatch.setattr(assistant.httpx, "post", fake_post)
+    assert assistant.ask_llm("вопрос", "контекст") == "Ответ модели"
+
+    # Лишний слэш в корне схлопывается, путь -- ровно один.
+    assert sent["url"] == "https://gateway.local/v1/chat/completions"
+    assert sent["kwargs"]["json"]["model"] == "своя-модель"
+    assert sent["kwargs"]["headers"]["Authorization"] == "Bearer ключ"
+
+
+def test_an_empty_address_is_a_refusal_not_a_request(monkeypatch):
+    # Пустой корень -- это незаполненная настройка. Запрос на адрес вида
+    # "/chat/completions" был бы ошибкой транспорта и выглядел бы как поломка
+    # сети, а ассистент в этом случае честно говорит, что модели нет.
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    monkeypatch.setattr(settings, "DEEPSEEK_API_KEY", "ключ")
+    monkeypatch.setattr(settings, "DEEPSEEK_BASE_URL", "  ")
+
+    def explode(*args, **kwargs):  # pragma: no cover - must not run at all
+        raise AssertionError("запрос ушёл на пустой адрес")
+
+    monkeypatch.setattr(assistant.httpx, "post", explode)
+    with pytest.raises(assistant.LlmUnavailable):
+        assistant.ask_llm("вопрос", "контекст")
+
+
+def test_an_empty_address_does_not_break_the_page(student, monkeypatch):
+    # То же самое, но глазами ученика: страница отвечает подсказкой, а не 500.
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "")
+    monkeypatch.setattr(settings, "DEEPSEEK_API_KEY", "ключ")
+    monkeypatch.setattr(settings, "DEEPSEEK_BASE_URL", "")
+    response = student.post("/assistant", "/assistant", {"question": "расскажи анекдот"})
+    assert response.status_code == 200
+    # Не «ошибка сервера», а та же честная фраза, что и при упавшей модели.
+    assert "Модель" in response.text
 
 
 def test_the_context_sent_to_the_model_carries_no_names(session_factory, class_data):

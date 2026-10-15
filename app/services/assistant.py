@@ -258,6 +258,20 @@ def llm_configured() -> bool:
     )
 
 
+def _endpoint(base_url: str, path: str) -> str:
+    """Собрать адрес запроса из корня API и пути к методу.
+
+    Корень приходит из настроек (``*_BASE_URL``), путь -- константа этого
+    модуля: у Anthropic это ``/messages``, у OpenAI и DeepSeek -- ``/chat/
+    completions``. Лишний слэш на конце корня не мешает, пустой корень --
+    незаполненная настройка, а не адрес вида ``/chat/completions``.
+    """
+    root = base_url.strip().rstrip("/")
+    if not root:
+        raise LlmUnavailable()
+    return f"{root}/{path}"
+
+
 def ask_llm(question: str, context: str) -> str:
     """Спросить модель. Claude, затем OpenAI, затем DeepSeek.
 
@@ -266,12 +280,14 @@ def ask_llm(question: str, context: str) -> str:
     (chat/completions), поэтому у них общий код и разные адрес, ключ и модель.
     Порядок -- порядок объявления ключей в настройках: побеждает первый
     заполненный, чтобы владелец сайта управлял выбором из .env, а не из кода.
+    Адрес и идентификатор модели тоже из настроек (``*_BASE_URL``, ``*_MODEL``):
+    так провайдера можно поменять на стенде, не пересобирая образ.
     """
     if settings.ANTHROPIC_API_KEY:
         return _ask_anthropic(question, context)
     if settings.OPENAI_API_KEY:
         return _ask_openai_compatible(
-            url="https://api.openai.com/v1/chat/completions",
+            url=_endpoint(settings.OPENAI_BASE_URL, "chat/completions"),
             api_key=settings.OPENAI_API_KEY,
             model=settings.OPENAI_MODEL,
             question=question,
@@ -279,7 +295,7 @@ def ask_llm(question: str, context: str) -> str:
         )
     if settings.DEEPSEEK_API_KEY:
         return _ask_openai_compatible(
-            url="https://api.deepseek.com/chat/completions",
+            url=_endpoint(settings.DEEPSEEK_BASE_URL, "chat/completions"),
             api_key=settings.DEEPSEEK_API_KEY,
             model=settings.DEEPSEEK_MODEL,
             question=question,
@@ -301,7 +317,7 @@ def _ask_anthropic(question: str, context: str) -> str:
         ],
     }
     response = httpx.post(
-        "https://api.anthropic.com/v1/messages",
+        _endpoint(settings.ANTHROPIC_BASE_URL, "messages"),
         headers={
             "x-api-key": settings.ANTHROPIC_API_KEY,
             "anthropic-version": "2023-06-01",

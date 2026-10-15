@@ -49,7 +49,16 @@ services:
         sync: false
       - key: JURY_ADMIN_PASSWORD
         sync: false
-      # Optional: the assistant answers from the school's tables without it, and
-      # only asks a model when this is set (app.services.assistant).
-      - key: ANTHROPIC_API_KEY
+      # Optional: the assistant answers from the school's tables without a key,
+      # and only then asks a model (app.services.assistant). DeepSeek is the
+      # provider the stand is set up for; the address and the model id are here
+      # as values rather than left to the defaults in app/config.py, so that the
+      # dashboard shows what the site actually calls. One key is enough: with
+      # ANTHROPIC_API_KEY or OPENAI_API_KEY also filled in, the order is
+      # Anthropic, then OpenAI, then DeepSeek -- the first one wins.
+      - key: DEEPSEEK_API_KEY
         sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com

@@ -188,6 +188,17 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"
+    # Root of each provider's API, and nothing more: app.services.assistant adds
+    # the path itself (``/messages`` for Anthropic, ``/chat/completions`` for the
+    # two OpenAI-compatible ones), so a trailing slash here changes nothing.
+    # These exist for the cases the three documented addresses do not cover: a
+    # proxy in front of a provider, a self-hosted gateway, or a local model.
+    # DeepSeek is reachable both as ``https://api.deepseek.com`` and as
+    # ``https://api.deepseek.com/v1`` -- two spellings of one endpoint, and the
+    # first is what DeepSeek documents as its base URL.
+    ANTHROPIC_BASE_URL: str = "https://api.anthropic.com/v1"
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     # Upper bound on a generated answer, and how long to wait for it before
     # falling back to the school-database refusal text.
     ASSISTANT_MAX_TOKENS: int = 1024
