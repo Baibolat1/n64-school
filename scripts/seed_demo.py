@@ -3,15 +3,23 @@
 
 Заливает то, без чего новый сайт выглядит пустым: расписание и домашние
 задания шести классов, турниры школы с наградами, профили учеников с
-аватарками, посты с комментариями и лайками и отзывы об учителях. Отдельно —
-закреплённый пост с идеей о развитии школы, которую поддержала почти вся школа
-и на которую ответила администрация: это единственный пост, который показывает
-закреп и плашку «Важное» (см. ``--reset`` и ``docs/PLAN.md``).
+аватарками, посты с комментариями и лайками, отзывы об учителях и несколько
+жалоб в очередь модератора. Отдельно — закреплённый пост с идеей о развитии
+школы, которую поддержала почти вся школа и на которую ответила
+администрация: это единственный пост, который показывает закреп и плашку
+«Важное» (см. ``--reset`` и ``docs/PLAN.md``).
 
 Данные выдуманы и лежат прямо в скрипте, а не в JSON-файле, как у учителей:
 это витрина для демонстрации, а не данные школы, и настоящие имена в неё
 попасть не должны. Файл данных здесь был бы ещё одним местом, куда их можно
-случайно вписать.
+случайно вписать. Аккаунты жюри (``seed_jury``) -- исключение и вовсе не
+данные: логины и пароли приходят из переменных окружения, а в базе остаются
+только хеши (``docs/DEPLOY.md``).
+
+Точка входа одна -- ``seed_all``: её зовут и ``main`` ниже, и приложение на
+старте, когда заливку разрешает ``SEED_DEMO`` (``app.main``). Заливка на
+старте -- это один вызов, которому легко забыть ``commit``, поэтому коммит
+стоит внутри ``seed_all``, а не у вызывающего.
 
 Повторный запуск ничего не дублирует: у каждой таблицы свой естественный ключ
 (класс и урок сетки, игра и название турнира, псевдоним ученика, пара
@@ -40,18 +48,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import app.models  # noqa: F401,E402  (registers every table on Base.metadata)
 from sqlalchemy import delete  # noqa: E402
 
+from app.config import _absolute, settings  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.db.base import Base, SessionLocal  # noqa: E402
+from app.models.audit import TARGET_POST  # noqa: E402
+from app.repositories import admins as admins_repo  # noqa: E402
 from app.repositories import comments as comments_repo  # noqa: E402
 from app.repositories import criteria as criteria_repo  # noqa: E402
 from app.repositories import likes as likes_repo  # noqa: E402
 from app.repositories import posts as posts_repo  # noqa: E402
+from app.repositories import reports as reports_repo  # noqa: E402
 from app.repositories import reviews as reviews_repo  # noqa: E402
 from app.repositories import schedule as schedule_repo  # noqa: E402
 from app.repositories import students as students_repo  # noqa: E402
 from app.repositories import teachers as teachers_repo  # noqa: E402
 from app.repositories import tournaments as tournaments_repo  # noqa: E402
 from app.services import publication  # noqa: E402
+from app.services.registration import normalize_email  # noqa: E402
+from scripts import seed_teachers  # noqa: E402
 
 # Что сброс не трогает. Админ и его сессии -- это не демонстрация, а вход в
 # панель: снести их значит запереть себя снаружи. ``alembic_version`` -- вообще
@@ -289,44 +303,32 @@ ADMIN_ALIAS = "Администрация школы"
 STUDENTS = (
     ("Тихий Лис", "8А", "waves"),
     ("Быстрый Кот", "8А", "peaks"),
-    ("Добрый Барс", "8А", None),
     ("Весенний Гром", "8А", "spiral"),
     ("Тихая Река", "8А", "waves"),
     ("Смелый Ястреб", "8А", "diamond"),
-    ("Пряный Мёд", "8А", "petals"),
     ("Полярная Сова", "8Б", "moon"),
     ("Лунный Ёж", "8Б", "spiral"),
     ("Синий Кит", "8Б", "waves"),
     ("Дальний Берег", "8Б", "peaks"),
     ("Ночная Ласка", "8Б", None),
-    ("Белый Парус", "8Б", "ring"),
-    ("Крепкий Орех", "8Б", "grid"),
     ("Зимняя Рысь", "9А", "dawn"),
     ("Ясный Ветер", "9А", "leaf"),
     ("Северный Кедр", "9А", "diamond"),
     ("Хитрый Барсук", "9А", "grid"),
-    ("Острый Клинок", "9А", "star"),
     ("Солнечный Луч", "9А", "dawn"),
-    ("Пушистый Хвост", "9А", None),
-    ("Морозный Ключ", "9Б", "circle"),
     ("Живой Огонь", "9Б", "star"),
     ("Тонкий Лёд", "9Б", "ring"),
     ("Гибкая Ива", "9Б", "leaf"),
     ("Тайный Шёпот", "9Б", "moon"),
-    ("Глубокий Омут", "9Б", "waves"),
     ("Звонкий Ручей", "9Б", "circle"),
     ("Каменный Мост", "10А", "peaks"),
     ("Пепельный Волк", "10А", "diamond"),
     ("Ранний Сокол", "10А", "star"),
     ("Дикая Мята", "10А", "leaf"),
-    ("Хмурый Бобр", "10А", None),
-    ("Сонный Сурок", "10А", "petals"),
     ("Светлая Заря", "10Б", "dawn"),
-    ("Весёлый Ёрш", "10Б", "circle"),
     ("Тихая Гавань", "10Б", "spiral"),
     ("Строгий Сфинкс", "10Б", None),
     ("Редкий Гость", "10Б", "grid"),
-    ("Медный Всадник", "10Б", "ring"),
     (ADMIN_ALIAS, None, "ring"),
 )
 
@@ -373,7 +375,7 @@ POSTS = (
         "информатики.",
     ),
     (
-        "Добрый Барс",
+        "Тихая Река",
         True,
         False,
         "Кто-нибудь понял, что задали по геометрии? В расписании замену "
@@ -451,7 +453,7 @@ POSTS = (
         "музыки без слов, чтобы не отвлекаться на текст. Делиться?",
     ),
     (
-        "Острый Клинок",
+        "Северный Кедр",
         False,
         False,
         "Театральная студия объявляет набор: ставим короткие сценки, "
@@ -472,7 +474,7 @@ POSTS = (
         "четверг, если не будет лить снова.",
     ),
     (
-        "Морозный Ключ",
+        "Тайный Шёпот",
         True,
         False,
         "Помогите с английским: нужно написать письмо о своей школе, а я не "
@@ -508,7 +510,7 @@ POSTS = (
         "запеканка и омлет. Каша, если что, остаётся в рамках программы.",
     ),
     (
-        "Глубокий Омут",
+        "Гибкая Ива",
         True,
         False,
         "Кто может объяснить, почему в информатике цикл while называют циклом "
@@ -550,7 +552,7 @@ POSTS = (
 # заходил; псевдонимы из STUDENTS, включая администрацию (её поддержка видна и
 # в ответе, но и лайк под идеей не лишний).
 LIKED_BY_ALMOST_ALL = {
-    1: ("Морозный Ключ", "Хмурый Бобр", "Сонный Сурок", "Медный Всадник"),
+    1: ("Тайный Шёпот", "Пепельный Волк", "Ранний Сокол", "Редкий Гость"),
 }
 
 # Комментарии: номер поста в POSTS (с нуля), псевдоним, анонимно ли, текст.
@@ -594,7 +596,7 @@ COMMENTS = (
         "Для всех: сетка звонков одна на школу. Расписание на сайте уже новое.",
     ),
     (2, "Ясный Ветер", False, "Я в деле, напишу в личку вечером."),
-    (2, "Белый Парус", True, "А новичков берёте? Играю месяца три."),
+    (2, "Дальний Берег", True, "А новичков берёте? Играю месяца три."),
     (2, "Тихий Лис", False, "Если возьмёте восьмой класс, буду вторым запасным."),
     (
         3,
@@ -608,8 +610,8 @@ COMMENTS = (
     (5, "Зимняя Рысь", False, "Возьмём, с этого и начинаем."),
     (7, "Дальний Берег", False, "Суббота в девять — не рано? Может, в одиннадцать?"),
     (7, "Смелый Ястреб", False, "В одиннадцать спортзал занят, так что в девять."),
-    (11, "Крепкий Орех", False, "Покажите, интересно: как он кружку не роняет?"),
-    (13, "Пряный Мёд", False, "Делитесь, конечно. Как раз не хватает чего-то спокойного."),
+    (11, "Ночная Ласка", False, "Покажите, интересно: как он кружку не роняет?"),
+    (13, "Весенний Гром", False, "Делитесь, конечно. Как раз не хватает чего-то спокойного."),
     (
         17,
         "Ночная Ласка",
@@ -638,13 +640,13 @@ LIKES = (
     (0, "Тонкий Лёд"),
     (2, "Полярная Сова"),
     (2, "Быстрый Кот"),
-    (2, "Добрый Барс"),
+    (2, "Тихая Река"),
     (3, "Тихий Лис"),
     (3, "Весенний Гром"),
     (4, "Лунный Ёж"),
     (4, "Зимняя Рысь"),
     (4, "Ясный Ветер"),
-    (4, "Пушистый Хвост"),
+    (4, "Солнечный Луч"),
     (4, "Тихая Река"),
     (5, "Полярная Сова"),
     (5, "Ночная Ласка"),
@@ -656,20 +658,20 @@ LIKES = (
     (7, "Дальний Берег"),
     (7, "Смелый Ястреб"),
     (7, "Тонкий Лёд"),
-    (13, "Пряный Мёд"),
-    (13, "Сонный Сурок"),
+    (13, "Весенний Гром"),
+    (13, "Ранний Сокол"),
     (18, "Живой Огонь"),
     (18, "Дикая Мята"),
     (18, "Тихая Гавань"),
     (20, "Звонкий Ручей"),
-    (20, "Белый Парус"),
+    (20, "Дальний Берег"),
     (20, "Гибкая Ива"),
     (20, "Строгий Сфинкс"),
     (24, "Каменный Мост"),
     (24, "Пепельный Волк"),
     (24, "Ранний Сокол"),
-    (24, "Медный Всадник"),
-    (24, "Хмурый Бобр"),
+    (24, "Редкий Гость"),
+    (24, "Дикая Мята"),
     (25, "Дикая Мята"),
     (25, "Светлая Заря"),
     (25, "Редкий Гость"),
@@ -721,11 +723,50 @@ REVIEWS = (
     ),
 )
 
+# Жалобы: без них очередь модератора пуста, а жалоба -- единственный сигнал
+# модерации на этом сайте (мат разрешён, см. docs/PLAN.md). Строка -- это
+# «кто жалуется, номер поста в POSTS с нуля, причина, текст». Пост опознаётся
+# номером, а не id: id выдаёт база, а повторный запуск должен найти ту же
+# строку. На своё содержимое жаловаться нельзя -- это проверяет и сервис
+# (`app.services.reports`), и глазом видно в данных: автор поста и заявитель
+# всегда разные.
+REPORTS = (
+    (
+        "Весенний Гром",
+        19,
+        "pii",
+        "В посте имя учителя и фотографии учеников, а согласия никто не давал.",
+    ),
+    (
+        "Синий Кит",
+        12,
+        "other",
+        "Обвинение одноклассника в ленте: это стоит выяснять лично, а не тут.",
+    ),
+    (
+        "Полярная Сова",
+        18,
+        "spam",
+        "Ищут подрядчика по мерчу — похоже на рекламу, а не на школьное дело.",
+    ),
+)
+
 # Аккаунт для демонстрации: к нему привязываются пароль и адрес по флагу
 # --with-login. Псевдоним -- автор закреплённой идеи, чтобы у входа был профиль
 # с расписанием, наградами, постами и отзывами.
 LOGIN_ALIAS = "Тихий Лис"
 LOGIN_EMAIL = "demo@n64hub.example"
+
+# Аккаунт жюри: обычный ученик 8А, но заведённый из переменных окружения
+# (``JURY_LOGIN`` / ``JURY_PASSWORD``), а не из списка выше -- паролям в
+# репозитории не место. Псевдоним фиксированный: он и есть естественный ключ,
+# по которому повторный запуск находит ту же строку, а не заводит вторую.
+# Заодно этот ученик -- тридцатый: столько же, сколько в
+# ``OPEN_REGISTRATION_LIMIT``, и почтовая регистрация после него закрыта
+# (``app.services.registration.registration_open``).
+JURY_ALIAS = "Светлый Гость"
+JURY_CLASS = "8А"
+JURY_AVATAR_KEY = "petals"
 
 
 class Tally:
@@ -1013,6 +1054,154 @@ def grant_login(db, *, password: str) -> bool:
     return True
 
 
+def seed_jury(db) -> dict[str, Tally]:
+    """Аккаунты жюри: ученик и админ, оба из переменных окружения.
+
+    Ни одна строка не создаётся, если не задана её пара логин-пароль: у
+    демонстрации без жюри этих аккаунтов просто нет, а не «есть, но с паролем
+    по умолчанию». Пароль хешируется argon2 (``app.core.security``) и
+    перезаписывается при каждом запуске -- так стенд чинится сам, если пароль
+    в переменной поменяли, а база осталась прежней. Админ, который уже есть,
+    не трогается: его мог завести человек, и менять ему пароль заливкой нельзя
+    (то же правило, что в ``scripts/seed_admin.py``).
+    """
+    counts: dict[str, Tally] = {}
+
+    if settings.JURY_LOGIN and settings.JURY_PASSWORD:
+        jury_student = Tally()
+        _, created = students_repo.upsert_student(
+            db,
+            alias=JURY_ALIAS,
+            class_name=JURY_CLASS,
+            avatar_key=JURY_AVATAR_KEY,
+            email=normalize_email(settings.JURY_LOGIN),
+            password_hash=hash_password(settings.JURY_PASSWORD),
+        )
+        jury_student.add(created)
+        counts["жюри (ученик)"] = jury_student
+
+    if settings.JURY_ADMIN_LOGIN and settings.JURY_ADMIN_PASSWORD:
+        jury_admin = Tally()
+        if admins_repo.get_admin_by_username(db, settings.JURY_ADMIN_LOGIN) is None:
+            admins_repo.create_admin(
+                db,
+                username=settings.JURY_ADMIN_LOGIN,
+                password_hash=hash_password(settings.JURY_ADMIN_PASSWORD),
+            )
+            jury_admin.add(True)
+        else:
+            jury_admin.add(False)
+        counts["жюри (админ)"] = jury_admin
+
+    return counts
+
+
+def seed_reports(db) -> dict[str, Tally]:
+    """Жалобы -- чтобы у модератора в очереди было что разбирать.
+
+    Жалоба не скрывает содержимое: она его только ставит в очередь, и это
+    видно на демонстрации -- пост с жалобой всё так же в ленте. Ключ -- пара
+    «кто жалуется и на что»: второй такой жалобы сайт не допускает
+    (``uq_reports_reporter_id_target_type_target_id``), поэтому повторный
+    запуск находит строку, а не заводит дубль.
+    """
+    reports = Tally()
+    for alias, post_index, reason_code, comment in REPORTS:
+        post = posts_repo.get_post_by_body(db, POSTS[post_index][3])
+        if post is None:
+            # Пост ищется по тексту: если текста нет, данные разошлись с
+            # заливкой, и это ошибка данных, а не повод пропустить жалобу.
+            raise ValueError(f"жалоба: пост №{post_index} не найден")
+        reporter = _student(db, alias, "жалоба")
+        existing = reports_repo.get_report(
+            db,
+            reporter_id=reporter.id,
+            target_type=TARGET_POST,
+            target_id=post.id,
+        )
+        if existing is not None:
+            reports.add(False)
+            continue
+        reports_repo.create_report(
+            db,
+            reporter_id=reporter.id,
+            target_type=TARGET_POST,
+            target_id=post.id,
+            reason_code=reason_code,
+            comment=comment,
+        )
+        reports.add(True)
+    return {"жалобы": reports}
+
+
+def seed_teachers_if_empty(db) -> dict[str, Tally]:
+    """Учителя и критерии отзывов -- из файла данных, если их в базе нет.
+
+    Локально учителей заливает отдельный ``scripts/seed_teachers.py``, а на
+    демонстрационном стенде звать второй скрипт некому: без них страница
+    учителей пуста, а отзывы писать не о ком. Шаг мягкий и только в пустые
+    таблицы: если учителя в базе уже есть (например, настоящие), заливка их не
+    касается.
+    """
+    if teachers_repo.list_active_teachers(db) or criteria_repo.list_active_criteria(db):
+        return {}
+
+    path = Path(_absolute(settings.TEACHERS_DATA_FILE))
+    if not path.exists():
+        # Демо-файл с выдуманными именами лежит в репозитории, а файл настоящих
+        # имён -- вне него (см. .env.example). Сказать об этом вслух: имена на
+        # стенде должны быть выдуманными, и это должно быть видно в журнале.
+        path = seed_teachers.DEMO_FILE
+        print(
+            f"Учителя: {settings.TEACHERS_DATA_FILE} не найден, беру "
+            f"{path.name} (имена выдуманы).",
+            file=sys.stderr,
+        )
+
+    try:
+        criteria, teachers = seed_teachers.load_data(path)
+    except seed_teachers.DataError as error:
+        # Ошибка в файле -- повод сказать об этом и остаться без отзывов, а не
+        # ронять заливку остальных данных, тем более на старте приложения.
+        print(f"Учителя: данные не залиты — {error}", file=sys.stderr)
+        return {}
+
+    created_c, updated_c, created_t, updated_t, _deactivated = seed_teachers.seed(
+        db, criteria, teachers, prune=False
+    )
+    criteria_tally, teachers_tally = Tally(), Tally()
+    criteria_tally.created, criteria_tally.updated = created_c, updated_c
+    teachers_tally.created, teachers_tally.updated = created_t, updated_t
+    return {"критерии отзывов": criteria_tally, "учителя": teachers_tally}
+
+
+def seed_all(db, *, now: datetime | None = None) -> dict[str, Tally]:
+    """Вся демонстрация одним вызовом: и ``main`` ниже, и заливка на старте.
+
+    Порядок шагов -- он же порядок зависимостей: без учителей не о ком писать
+    отзывы, без учеников некому писать посты, а жюри заводится последним, чтобы
+    аккаунт жюри ничего не публиковало от себя и легко отличалось от демо-школы.
+
+    ``commit`` внутри, а не у вызывающего: заливка на старте -- это один вызов
+    (``app.main._seed_demo_at_startup``), и забытый там коммит стоил бы базы,
+    которая заполнилась и тут же пропала. Пока коммит не сделан, исключение на
+    любом шаге откатывает всю заливку: половины демонстрации не бывает.
+    """
+    now = now or datetime.now(timezone.utc)
+
+    counts: dict[str, Tally] = {}
+    counts.update(seed_teachers_if_empty(db))
+    counts.update(seed_students(db))
+    counts.update(seed_school(db, today=now.date()))
+    counts.update(seed_esports(db, now=now))
+    counts.update(seed_social(db))
+    counts.update(seed_reviews(db))
+    counts.update(seed_reports(db))
+    counts.update(seed_jury(db))
+    db.commit()
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Fill the site with demo data (schedule, esports, students, feed)."
@@ -1045,12 +1234,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"сброшено: {table}: {count}")
             print(f"сброшено всего строк: {sum(removed.values())}")
 
-        counts: dict[str, Tally] = {}
-        counts.update(seed_students(db))
-        counts.update(seed_school(db, today=now.date()))
-        counts.update(seed_esports(db, now=now))
-        counts.update(seed_social(db))
-        counts.update(seed_reviews(db))
+        # Тот же порядок шагов, что и при заливке на старте приложения: одна
+        # реализация на два входа (``seed_all``).
+        counts = seed_all(db, now=now)
         login_ok = grant_login(db, password=password) if args.with_login else False
         db.commit()
 

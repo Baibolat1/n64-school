@@ -1,4 +1,19 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# The repository root, used to resolve the paths that come from the environment
+# (the database file, the teachers file). Resolving them against the project
+# rather than the current directory is what makes the app indifferent to where
+# it was started from -- a deployed process has no promise about its cwd.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _absolute(path: str) -> str:
+    """``path`` as an absolute path, unless it already is one or is ``:memory:``."""
+    if path == ":memory:" or Path(path).is_absolute():
+        return path
+    return str(PROJECT_ROOT / path)
 
 
 class Settings(BaseSettings):
@@ -13,9 +28,44 @@ class Settings(BaseSettings):
     # HMAC used to hash invite codes. Rotating it invalidates every existing
     # student session and every previously issued invite code, so treat it as
     # permanent once the site is live.
-    SECRET_KEY: str = "change-me"
-    DATABASE_URL: str = "sqlite:///./school.db"
+    #
+    # There is deliberately no default. A built-in placeholder would sign real
+    # sessions on a deployed site with a key anybody can read in the source, and
+    # the failure would be silent: everything keeps working, only the signatures
+    # stop meaning anything. Empty is visible -- it warns at startup (see
+    # app.core.logging) and, on Render, render.yaml generates the value.
+    SECRET_KEY: str = ""
+    # Where the SQLite file lives. The path is resolved against the repository
+    # root, so the database is the same file no matter which directory the app
+    # was started from. ``:memory:`` and absolute paths are taken as they are.
+    DATABASE_PATH: str = "school.db"
+    # Full SQLAlchemy URL, for anything that is not a local SQLite file (the
+    # tests point this at their own temporary database). When it is set it wins
+    # over DATABASE_PATH; see the ``database_url`` property below.
+    DATABASE_URL: str = ""
     DEBUG: bool = False
+
+    @property
+    def database_url(self) -> str:
+        """The SQLAlchemy URL the engine and alembic connect with."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"sqlite:///{_absolute(self.DATABASE_PATH)}"
+
+    # --- Demo data at startup -------------------------------------------------
+    # Fill an empty database with the demonstration at startup. Meant for the
+    # deployed demo, whose filesystem is wiped on every restart: the site would
+    # otherwise come up as a login form and nothing else. The seeding is
+    # idempotent and only runs when the database holds no students at all, so it
+    # cannot touch a database that is already in use.
+    SEED_DEMO: bool = False
+    # Accounts for the jury of the hackathon, created by the startup seeding and
+    # by ``scripts/seed_demo.py --with-jury``. All four are empty by default and
+    # absent from the repository: no account is created unless they are set.
+    JURY_LOGIN: str = ""
+    JURY_PASSWORD: str = ""
+    JURY_ADMIN_LOGIN: str = ""
+    JURY_ADMIN_PASSWORD: str = ""
 
     # --- Admin authentication -------------------------------------------------
     # Name of the cookie that carries the raw admin session token.
@@ -81,6 +131,16 @@ class Settings(BaseSettings):
     # Lifetime, in hours, of a student registration QR token. After it expires
     # the novice must generate a new code ("Обновить код").
     QR_TOKEN_TTL_HOURS: int = 24
+    # How many novices one student may confirm within ``QR_INVITE_WINDOW_HOURS``.
+    # Confirming is an invitation: without a ceiling one account can walk in a
+    # whole crowd. Counting is done on the confirmed tokens themselves (see
+    # app.services.registration), so it survives a restart.
+    QR_INVITES_PER_STUDENT: int = 3
+    QR_INVITE_WINDOW_HOURS: int = 24
+    # Total number of accounts that may ever be created through the QR flow. The
+    # QR path is the way in *after* open registration closes, so this is the hard
+    # ceiling on how large the site can grow on its own.
+    QR_ACCOUNT_LIMIT: int = 40
     # Sign in with email and password (available to every student who has a
     # password, i.e. the first ``OPEN_REGISTRATION_LIMIT`` and QR-registered
     # ones) is throttled per client IP like the invite-code form.
@@ -102,8 +162,14 @@ class Settings(BaseSettings):
     # Questions to the assistant. A question that reaches the model costs real
     # money, so the budget is tighter than the posting one; answers served from
     # the school database are counted too, to keep the counter simple.
-    RATE_LIMIT_ASSISTANT: int = 30
+    RATE_LIMIT_ASSISTANT: int = 20
     RATE_LIMIT_ASSISTANT_WINDOW_SECONDS: int = 3600
+    # Site-wide ceiling on questions per day, on top of the per-student window
+    # above. A single student is bounded by their own limit; the whole audience
+    # is not, and every question that reaches a model costs money. When the day's
+    # budget is gone the assistant says so in words (see app.routers.school) --
+    # the visitor has nothing to fix, so it is not an error page.
+    ASSISTANT_DAILY_LIMIT: int = 200
 
     # --- Assistant (hybrid: school database first, model second) --------------
     # All three keys are optional and all empty by default: without a key the
